@@ -118,6 +118,8 @@ interface SupabaseCreds {
 interface VercelCreds {
   access_token: string;
   team_id?: string | null;
+  user_id?: string;
+  installation_id?: string;
 }
 
 async function getProviderCredentials(
@@ -250,6 +252,12 @@ export async function executeSeedRun(ctx: ExecutorContext): Promise<void> {
   let supabaseAccessToken = "";
   let vercelDeploymentId = "";
   let previewUrl = "";
+  let vercelProjectId = "";
+  let vercelProjectName = "";
+  let vercelAccountId = "";
+  let vercelTeamId = "";
+  let vercelInstallationId = "";
+  let vercelAuthorizedUserId = "";
 
   // Load existing project_resources immediately so any resumed steps have all context
   const { data: initialResources } = await admin
@@ -271,6 +279,12 @@ export async function executeSeedRun(ctx: ExecutorContext): Promise<void> {
       supabasePublishableKey = (meta.publishableKey as string) ?? "";
     }
     if (r.provider === "vercel") {
+      vercelProjectId = (meta.vercelProjectId as string) ?? r.external_id;
+      vercelProjectName = (meta.projectName as string) ?? "";
+      vercelAccountId = (meta.accountId as string) ?? "";
+      vercelTeamId = (meta.teamId as string) ?? "";
+      vercelInstallationId = (meta.integrationInstallationId as string) ?? "";
+      vercelAuthorizedUserId = (meta.authorizedUserId as string) ?? "";
       vercelDeploymentId = (meta.deploymentId as string) ?? "";
       previewUrl = (meta.previewUrl as string) ?? "";
     }
@@ -602,7 +616,6 @@ export async function executeSeedRun(ctx: ExecutorContext): Promise<void> {
     });
 
     // ── 8. Vercel project ──────────────────────────────────────────────────
-    let vercelProjectId = "";
     await runStep(ctx.runId, "vercel_project", statuses, async () => {
       const encryptedVcCreds = await getProviderCredentials(admin, ctx.workspaceId, "vercel");
       let vcCreds: VercelCreds;
@@ -613,13 +626,27 @@ export async function executeSeedRun(ctx: ExecutorContext): Promise<void> {
         throw new Error("Vercel credentials are corrupted. Please reconnect Vercel.");
       }
 
+      vercelTeamId = vcCreds.team_id ?? vercelTeamId;
+      vercelInstallationId = vcCreds.installation_id ?? vercelInstallationId;
+      vercelAuthorizedUserId = vcCreds.user_id ?? vercelAuthorizedUserId;
+
       const vercel = new VercelDeploymentProvider(
         vcCreds.access_token,
-        ctx.projectSlug,
-        vcCreds.team_id ?? undefined,
+        vercelProjectId || ctx.projectSlug,
+        vercelTeamId || undefined,
       );
-      const project = await vercel.createOrReuseProject(ctx.projectSlug);
+      const project = vercelProjectId
+        ? await vercel.requireProject(vercelProjectId, vercelAccountId || vercelTeamId || undefined)
+        : await vercel.createOrReuseProject(ctx.projectSlug);
       vercelProjectId = project.id;
+      vercelProjectName = project.name;
+      vercelAccountId = project.accountId ?? vercelTeamId;
+
+      if (vercelTeamId && vercelAccountId && vercelTeamId !== vercelAccountId) {
+        throw new Error(
+          `Vercel created project '${vercelProjectId}' under account '${vercelAccountId}', but the authorized team is '${vercelTeamId}'. Seed stopped before configuring it.`,
+        );
+      }
 
       // Link the GitHub repository
       if (repoName && gitHubOwner) {
@@ -630,13 +657,23 @@ export async function executeSeedRun(ctx: ExecutorContext): Promise<void> {
       }
 
       await upsertResource(admin, ctx.projectId, "vercel", project.id, {
-        projectName: ctx.projectSlug,
+        projectName: project.name,
         vercelProjectId: project.id,
+        accountId: vercelAccountId,
+        teamId: vercelTeamId || null,
+        integrationInstallationId: vercelInstallationId || null,
+        authorizedUserId: vercelAuthorizedUserId || null,
         deploymentId: "",
         previewUrl: "",
         productionUrl: "",
       });
-      await audit(admin, ctx, "create_vercel_project", { projectId: project.id });
+      await audit(admin, ctx, "create_vercel_project", {
+        projectId: project.id,
+        projectName: project.name,
+        accountId: vercelAccountId,
+        teamId: vercelTeamId || null,
+        integrationInstallationId: vercelInstallationId || null,
+      });
     });
 
     // ── 9. Vercel env vars ─────────────────────────────────────────────────
@@ -644,11 +681,52 @@ export async function executeSeedRun(ctx: ExecutorContext): Promise<void> {
       const encryptedVcCreds = await getProviderCredentials(admin, ctx.workspaceId, "vercel");
       const vcCreds = JSON.parse(decryptCredential(encryptedVcCreds)) as VercelCreds;
 
+      if (!vercelProjectId) {
+        throw new Error(
+          "Seed has no stored Vercel project ID. Environment variables were not changed.",
+        );
+      }
+
+      const authorizedTeamId = vercelTeamId || vcCreds.team_id || "";
+      if (vercelTeamId && vcCreds.team_id && vercelTeamId !== vcCreds.team_id) {
+        throw new Error(
+          `Vercel authorization now points to team '${vcCreds.team_id}', but this project was created under '${vercelTeamId}'. Environment variables were not changed.`,
+        );
+      }
+
       const vercel = new VercelDeploymentProvider(
         vcCreds.access_token,
-        ctx.projectSlug,
-        vcCreds.team_id ?? undefined,
+        vercelProjectId,
+        authorizedTeamId || undefined,
       );
+
+      // Required identity check: use the persisted ID and original account scope.
+      const project = await vercel.requireProject(
+        vercelProjectId,
+        vercelAccountId || authorizedTeamId || undefined,
+      );
+      vercelProjectName = project.name;
+      vercelAccountId = project.accountId ?? vercelAccountId ?? authorizedTeamId;
+
+      await upsertResource(admin, ctx.projectId, "vercel", vercelProjectId, {
+        projectName: vercelProjectName,
+        vercelProjectId,
+        accountId: vercelAccountId,
+        teamId: authorizedTeamId || null,
+        integrationInstallationId:
+          vercelInstallationId || vcCreds.installation_id || null,
+        authorizedUserId: vercelAuthorizedUserId || vcCreds.user_id || null,
+        deploymentId: vercelDeploymentId,
+        previewUrl,
+        productionUrl: "",
+      });
+      await audit(admin, ctx, "verify_vercel_project_identity", {
+        projectId: vercelProjectId,
+        projectName: vercelProjectName,
+        accountId: vercelAccountId,
+        teamId: authorizedTeamId || null,
+        getProjectSucceeded: true,
+      });
 
       // Set public Supabase env vars (safe for client-side)
       await vercel.setEnvironmentVariable("NEXT_PUBLIC_SUPABASE_URL", supabaseUrl);
@@ -668,10 +746,20 @@ export async function executeSeedRun(ctx: ExecutorContext): Promise<void> {
       const encryptedVcCreds = await getProviderCredentials(admin, ctx.workspaceId, "vercel");
       const vcCreds = JSON.parse(decryptCredential(encryptedVcCreds)) as VercelCreds;
 
+      if (!vercelProjectId) {
+        throw new Error("Seed has no stored Vercel project ID for preview deployment.");
+      }
+
+      const authorizedTeamId = vercelTeamId || vcCreds.team_id || "";
+
       const vercel = new VercelDeploymentProvider(
         vcCreds.access_token,
-        ctx.projectSlug,
-        vcCreds.team_id ?? undefined,
+        vercelProjectId,
+        authorizedTeamId || undefined,
+      );
+      await vercel.requireProject(
+        vercelProjectId,
+        vercelAccountId || authorizedTeamId || undefined,
       );
 
       const deployment = await vercel.deploy();
@@ -693,8 +781,13 @@ export async function executeSeedRun(ctx: ExecutorContext): Promise<void> {
       previewUrl = result.url;
 
       await upsertResource(admin, ctx.projectId, "vercel", vercelProjectId || ctx.projectSlug, {
-        projectName: ctx.projectSlug,
+        projectName: vercelProjectName,
         vercelProjectId,
+        accountId: vercelAccountId,
+        teamId: authorizedTeamId || null,
+        integrationInstallationId:
+          vercelInstallationId || vcCreds.installation_id || null,
+        authorizedUserId: vercelAuthorizedUserId || vcCreds.user_id || null,
         deploymentId: vercelDeploymentId,
         previewUrl,
         productionUrl: "",

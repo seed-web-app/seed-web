@@ -93,9 +93,12 @@ export async function POST(request: Request) {
 
   const meta = (resources?.metadata_json ?? {}) as Record<string, unknown>;
   const deploymentId = meta.deploymentId as string | undefined;
-  const projectSlug = (meta.projectName as string) || project.slug;
+  const vercelProjectId = (meta.vercelProjectId as string) || resources?.external_id;
+  const projectName = (meta.projectName as string) || project.slug;
+  const storedTeamId = (meta.teamId as string) || undefined;
+  const accountId = (meta.accountId as string) || storedTeamId;
 
-  if (!deploymentId) {
+  if (!deploymentId || !vercelProjectId) {
     return NextResponse.json(
       { message: "No preview deployment found. Run a preview build first." },
       { status: 409 },
@@ -147,16 +150,18 @@ export async function POST(request: Request) {
     try {
       const vercel = new VercelDeploymentProvider(
         vcCreds.access_token,
-        projectSlug,
-        vcCreds.team_id ?? undefined,
+        vercelProjectId,
+        storedTeamId ?? vcCreds.team_id ?? undefined,
       );
+
+      await vercel.requireProject(vercelProjectId, accountId);
 
       await vercel.promoteToProduction(deploymentId);
 
       // Wait for production deployment to be ready
       const result = await vercel.waitForDeployment(deploymentId, 30, 10_000);
 
-      const productionUrl = result.url ?? `https://${projectSlug}.vercel.app`;
+      const productionUrl = result.url ?? `https://${projectName}.vercel.app`;
 
       // Update project_resources with production URL
       await admin

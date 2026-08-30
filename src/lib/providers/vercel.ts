@@ -1,10 +1,28 @@
 import "server-only";
 import type { DeploymentProvider } from "@/lib/providers/contracts";
 
+export interface VercelProjectIdentity {
+  id: string;
+  name: string;
+  accountId?: string;
+}
+
+class VercelApiError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = "VercelApiError";
+  }
+}
+
 export class VercelDeploymentProvider implements DeploymentProvider {
+  private resolvedProject: VercelProjectIdentity | null = null;
+
   constructor(
     private token: string,
-    private projectName: string,
+    private projectIdentifier: string,
     private teamId?: string,
   ) {}
 
@@ -29,7 +47,8 @@ export class VercelDeploymentProvider implements DeploymentProvider {
     });
     if (!response.ok) {
       const text = await response.text().catch(() => response.status.toString());
-      throw new Error(
+      throw new VercelApiError(
+        response.status,
         `Vercel ${init?.method ?? "GET"} ${path} failed (${response.status}): ${text}`,
       );
     }
@@ -39,57 +58,83 @@ export class VercelDeploymentProvider implements DeploymentProvider {
 
   // ── Project ─────────────────────────────────────────────────────────────────
 
-  async getProject(): Promise<{ id: string; name: string } | null> {
-    return this.request<{ id: string; name: string }>(
-      `/v9/projects/${encodeURIComponent(this.projectName)}${this.qs()}`,
-    ).catch(() => null);
+  private targetProjectId(): string {
+    return this.resolvedProject?.id ?? this.projectIdentifier;
   }
 
-  async createProject(name: string): Promise<{ id: string; name: string }> {
-    return this.request<{ id: string; name: string }>(`/v11/projects${this.qs()}`, {
+  async getProject(identifier = this.projectIdentifier): Promise<VercelProjectIdentity | null> {
+    try {
+      return await this.request<VercelProjectIdentity>(
+        `/v9/projects/${encodeURIComponent(identifier)}${this.qs()}`,
+      );
+    } catch (error) {
+      if (error instanceof VercelApiError && error.status === 404) return null;
+      throw error;
+    }
+  }
+
+  /**
+   * Resolve the exact persisted project ID before any project-scoped write.
+   * A team/account mismatch is treated as an identity error, not as a missing project.
+   */
+  async requireProject(
+    projectId: string,
+    expectedAccountId?: string,
+  ): Promise<VercelProjectIdentity> {
+    const project = await this.getProject(projectId);
+    if (!project) {
+      throw new Error(
+        `Stored Vercel project '${projectId}' could not be found in authorized account/team '${this.teamId ?? "personal"}'. Reconnect Vercel or restore access to that project.`,
+      );
+    }
+    if (expectedAccountId && project.accountId && project.accountId !== expectedAccountId) {
+      throw new Error(
+        `Stored Vercel project '${projectId}' belongs to account '${project.accountId}', but Seed expected '${expectedAccountId}'. Environment changes were not attempted.`,
+      );
+    }
+    this.resolvedProject = project;
+    this.projectIdentifier = project.id;
+    return project;
+  }
+
+  async createProject(name: string): Promise<VercelProjectIdentity> {
+    const project = await this.request<VercelProjectIdentity>(`/v11/projects${this.qs()}`, {
       method: "POST",
       body: JSON.stringify({ name, framework: "nextjs" }),
     });
+    this.resolvedProject = project;
+    this.projectIdentifier = project.id;
+    return project;
   }
 
   /** Idempotent: get existing project or create it. */
-  async createOrReuseProject(name: string): Promise<{ id: string; name: string }> {
-    const existing = await this.getProject();
-    if (existing) return existing;
-    const created = await this.createProject(name);
-    this.projectName = created.name;
-    return created;
+  async createOrReuseProject(name: string): Promise<VercelProjectIdentity> {
+    const existing = await this.getProject(name);
+    if (existing) {
+      this.resolvedProject = existing;
+      this.projectIdentifier = existing.id;
+      return existing;
+    }
+    return this.createProject(name);
   }
 
   // ── Environment variables ───────────────────────────────────────────────────
 
   /**
-   * Upserts an environment variable on a Vercel project.
-   * Checks existing env vars first — updates if present, creates if absent.
+   * Idempotently upserts an environment variable on the resolved Vercel project.
+   * The caller must resolve the persisted project ID with requireProject first.
    * Never logs the value.
    */
   async setEnvironmentVariable(name: string, value: string): Promise<void> {
-    // List existing env vars
-    const existing = await this.request<{
-      envs: Array<{ id: string; key: string }>;
-    }>(`/v10/projects/${encodeURIComponent(this.projectName)}/env${this.qs()}`).catch(
-      () => ({ envs: [] }),
-    );
-
-    const found = existing.envs.find((e) => e.key === name);
-    if (found) {
-      // Update existing
-      await this.request(
-        `/v10/projects/${encodeURIComponent(this.projectName)}/env/${found.id}${this.qs()}`,
-        {
-          method: "PATCH",
-          body: JSON.stringify({ value, type: "encrypted", target: ["production", "preview"] }),
-        },
+    if (!this.resolvedProject) {
+      throw new Error(
+        "Vercel project identity must be verified before configuring environment variables.",
       );
-    } else {
-      // Create new
+    }
+
+    try {
       await this.request(
-        `/v10/projects/${encodeURIComponent(this.projectName)}/env${this.qs()}`,
+        `/v10/projects/${encodeURIComponent(this.targetProjectId())}/env${this.qs({ upsert: "true" })}`,
         {
           method: "POST",
           body: JSON.stringify({
@@ -100,6 +145,13 @@ export class VercelDeploymentProvider implements DeploymentProvider {
           }),
         },
       );
+    } catch (error) {
+      if (error instanceof VercelApiError && error.status === 404) {
+        throw new Error(
+          `Vercel project '${this.targetProjectId()}' was verified in account/team '${this.teamId ?? "personal"}', but this integration cannot access its environment variables. Confirm the installed integration has Project Environment Variables read/write access.`,
+        );
+      }
+      throw error;
     }
   }
 
@@ -111,7 +163,11 @@ export class VercelDeploymentProvider implements DeploymentProvider {
       `/v13/deployments${this.qs()}`,
       {
         method: "POST",
-        body: JSON.stringify({ name: this.projectName, target: null }),
+        body: JSON.stringify({
+          name: this.resolvedProject?.name ?? this.projectIdentifier,
+          project: this.targetProjectId(),
+          target: null,
+        }),
       },
     );
     return { id: result.id, url: `https://${result.url}` };
@@ -167,7 +223,7 @@ export class VercelDeploymentProvider implements DeploymentProvider {
     owner: string,
     gitHubOrgId?: number,
   ): Promise<void> {
-    await this.request(`/v9/projects/${encodeURIComponent(this.projectName)}${this.qs()}`, {
+    await this.request(`/v9/projects/${encodeURIComponent(this.targetProjectId())}${this.qs()}`, {
       method: "PATCH",
       body: JSON.stringify({
         link: {
