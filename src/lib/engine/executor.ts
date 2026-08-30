@@ -251,6 +251,31 @@ export async function executeSeedRun(ctx: ExecutorContext): Promise<void> {
   let vercelDeploymentId = "";
   let previewUrl = "";
 
+  // Load existing project_resources immediately so any resumed steps have all context
+  const { data: initialResources } = await admin
+    .from("project_resources")
+    .select("provider,external_id,metadata_json")
+    .eq("project_id", ctx.projectId);
+
+  for (const r of initialResources ?? []) {
+    const meta = (r.metadata_json ?? {}) as Record<string, unknown>;
+    if (r.provider === "github") {
+      repoName = (meta.repoName as string) ?? repoName;
+      repoUrl = (meta.repoUrl as string) ?? "";
+      commitSha = (meta.commitSha as string) ?? "";
+      gitHubOwner = (meta.owner as string) ?? "";
+    }
+    if (r.provider === "supabase") {
+      supabaseProjectRef = r.external_id;
+      supabaseUrl = (meta.supabaseUrl as string) ?? "";
+      supabasePublishableKey = (meta.publishableKey as string) ?? "";
+    }
+    if (r.provider === "vercel") {
+      vercelDeploymentId = (meta.deploymentId as string) ?? "";
+      previewUrl = (meta.previewUrl as string) ?? "";
+    }
+  }
+
   try {
     // ── 1. Inspect ─────────────────────────────────────────────────────────
     await runStep(ctx.runId, "inspect", statuses, async () => {
@@ -258,31 +283,6 @@ export async function executeSeedRun(ctx: ExecutorContext): Promise<void> {
       for (const provider of ["github", "supabase", "vercel"] as const) {
         await getProviderCredentials(admin, ctx.workspaceId, provider);
       }
-      // Load any existing project_resources to resume correctly
-      const { data: resources } = await admin
-        .from("project_resources")
-        .select("provider,external_id,metadata_json")
-        .eq("project_id", ctx.projectId);
-
-      for (const r of resources ?? []) {
-        const meta = (r.metadata_json ?? {}) as Record<string, unknown>;
-        if (r.provider === "github") {
-          repoName = (meta.repoName as string) ?? repoName;
-          repoUrl = (meta.repoUrl as string) ?? "";
-          commitSha = (meta.commitSha as string) ?? "";
-          gitHubOwner = (meta.owner as string) ?? "";
-        }
-        if (r.provider === "supabase") {
-          supabaseProjectRef = r.external_id;
-          supabaseUrl = (meta.supabaseUrl as string) ?? "";
-          supabasePublishableKey = (meta.publishableKey as string) ?? "";
-        }
-        if (r.provider === "vercel") {
-          vercelDeploymentId = (meta.deploymentId as string) ?? "";
-          previewUrl = (meta.previewUrl as string) ?? "";
-        }
-      }
-
       await audit(admin, ctx, "inspect_project", { projectId: ctx.projectId });
     });
 
