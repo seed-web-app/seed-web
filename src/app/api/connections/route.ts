@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { randomBytes } from "crypto";
+import { createHash, randomBytes } from "crypto";
 import { cookies } from "next/headers";
 import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
 import { encryptCredential } from "@/lib/security/crypto";
+import { rootUrl, sharedAuthCookieOptions } from "@/lib/tenancy";
 import OpenAI from "openai";
 const connectionRequest = z.object({ provider: z.enum(["github", "supabase", "vercel", "openai"]), workspaceId: z.string().uuid().optional(), credential: z.string().min(20).max(500).optional() });
 export async function POST(request: Request) {
@@ -21,9 +22,11 @@ export async function POST(request: Request) {
     return NextResponse.json({configured:true,message:"Seed AI is active. Your key was encrypted and stored server-side."});
   }
   if(!workspaceId)return NextResponse.json({configured:false,message:"Select a workspace before connecting this account."},{status:400});
-  const state=randomBytes(24).toString("hex"); (await cookies()).set(`seed_oauth_${provider}`,JSON.stringify({state,workspaceId}),{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",maxAge:600,path:"/"});
-  const callback=`${process.env.NEXT_PUBLIC_APP_URL??"http://localhost:3000"}/api/connections/${provider}/callback`;
-  const supabaseScopes=process.env.SUPABASE_OAUTH_SCOPES??"organizations.read projects.read database.write";
-  const authorizationUrl=provider==="github"&&process.env.GITHUB_APP_SLUG?`https://github.com/apps/${process.env.GITHUB_APP_SLUG}/installations/new?state=${state}`:provider==="supabase"&&process.env.SUPABASE_OAUTH_CLIENT_ID?`https://api.supabase.com/v1/oauth/authorize?client_id=${process.env.SUPABASE_OAUTH_CLIENT_ID}&redirect_uri=${encodeURIComponent(callback)}&response_type=code&scope=${encodeURIComponent(supabaseScopes)}&state=${state}`:provider==="vercel"&&process.env.VERCEL_INTEGRATION_SLUG?`https://vercel.com/integrations/${process.env.VERCEL_INTEGRATION_SLUG}/new?state=${state}`:null;
+  const state=randomBytes(24).toString("hex");
+  const codeVerifier=provider==="supabase"?randomBytes(32).toString("base64url"):undefined;
+  const codeChallenge=codeVerifier?createHash("sha256").update(codeVerifier).digest("base64url"):undefined;
+  (await cookies()).set(`seed_oauth_${provider}`,JSON.stringify({state,workspaceId,codeVerifier}),sharedAuthCookieOptions({httpOnly:true,sameSite:"lax" as const,secure:process.env.NODE_ENV==="production",maxAge:600,path:"/"}));
+  const callback=rootUrl(`/api/connections/${provider}/callback`);
+  const authorizationUrl=provider==="github"&&process.env.GITHUB_APP_SLUG?`https://github.com/apps/${process.env.GITHUB_APP_SLUG}/installations/new?state=${state}`:provider==="supabase"&&process.env.SUPABASE_OAUTH_CLIENT_ID&&codeChallenge?`https://api.supabase.com/v1/oauth/authorize?client_id=${process.env.SUPABASE_OAUTH_CLIENT_ID}&redirect_uri=${encodeURIComponent(callback)}&response_type=code&state=${state}&code_challenge=${encodeURIComponent(codeChallenge)}&code_challenge_method=S256`:provider==="vercel"&&process.env.VERCEL_INTEGRATION_SLUG?`https://vercel.com/integrations/${process.env.VERCEL_INTEGRATION_SLUG}/new?state=${state}`:null;
   return NextResponse.json({configured:false,authorizationUrl,message:authorizationUrl?`Continue in ${label}'s secure authorization screen.`:`${label} OAuth credentials are not configured yet. Add them to .env.local to enable the live connection.`});
 }
