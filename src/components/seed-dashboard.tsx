@@ -212,6 +212,7 @@ export function SeedDashboard({
         body: JSON.stringify({
           provider: connection.id,
           workspaceId: context.demo ? undefined : context.workspaceId,
+          projectId: context.projectId || undefined,
           ...(connection.id === "openai" && apiKey ? { credential: apiKey } : {}),
         }),
       });
@@ -249,6 +250,42 @@ export function SeedDashboard({
         ),
       );
       setNotice("Seed could not reach the connection service. Please try again.");
+    }
+  }
+
+  async function disconnect(connection: Connection) {
+    if (context.demo) {
+      setConnections((items) =>
+        items.map((item) =>
+          item.id === connection.id ? { ...item, status: "Not connected" } : item,
+        ),
+      );
+      setNotice(`${connection.label} disconnected.`);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/connections", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          provider: connection.id,
+          workspaceId: context.workspaceId,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setNotice(data.message ?? "Could not disconnect provider.");
+        return;
+      }
+      setConnections((items) =>
+        items.map((item) =>
+          item.id === connection.id ? { ...item, status: "Not connected" } : item,
+        ),
+      );
+      setNotice(`${connection.label} was disconnected.`);
+    } catch {
+      setNotice("Seed could not reach the server to disconnect.");
     }
   }
 
@@ -429,7 +466,11 @@ export function SeedDashboard({
           />
         )}
         {view === "settings" && (
-          <SettingsView connections={connections} open={setConnectionModal} />
+          <SettingsView
+            connections={connections}
+            open={setConnectionModal}
+            disconnect={disconnect}
+          />
         )}
       </main>
 
@@ -1265,9 +1306,11 @@ function AskView({
 function SettingsView({
   connections,
   open,
+  disconnect,
 }: {
   connections: Connection[];
   open: (connection: Connection) => void;
+  disconnect: (connection: Connection) => void;
 }) {
   return (
     <>
@@ -1307,9 +1350,26 @@ function SettingsView({
             >
               {connection.status}
             </span>
-            <button className="secondary-button" onClick={() => open(connection)}>
-              {connection.status === "Not connected" ? "Connect" : "Reconnect"}
-            </button>
+            <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+              {connection.status === "Not connected" ? (
+                <button className="secondary-button" onClick={() => open(connection)}>
+                  Connect
+                </button>
+              ) : (
+                <>
+                  <button className="secondary-button" onClick={() => open(connection)}>
+                    Reconnect
+                  </button>
+                  <button
+                    className="secondary-button"
+                    style={{ color: "#a54036", borderColor: "#fce8e5" }}
+                    onClick={() => disconnect(connection)}
+                  >
+                    Disconnect
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         ))}
       </article>

@@ -126,7 +126,7 @@ export async function getDashboardContext(
       .order("updated_at", { ascending: false }),
     admin
       .from("provider_connections")
-      .select("provider,status")
+      .select("provider,status,encrypted_access_data")
       .eq("workspace_id", workspace.id),
   ]);
 
@@ -164,14 +164,40 @@ export async function getDashboardContext(
   }));
 
   const connections: DashboardContext["connections"] = {};
+  const { verifyStoredConnection } = await import("@/lib/connections/verification");
+
   for (const row of connectionRows ?? []) {
-    const status =
-      row.status === "connected"
-        ? "Connected"
-        : row.status === "needs_attention"
-          ? "Needs attention"
-          : "Connecting";
-    connections[row.provider as ProviderName] = status;
+    if (row.status === "connected" && row.encrypted_access_data) {
+      const verification = await verifyStoredConnection(
+        row.provider as ProviderName,
+        row.encrypted_access_data,
+      );
+      if (verification.valid) {
+        connections[row.provider as ProviderName] = "Connected";
+        // If it was refreshed, update stored credential
+        if (verification.metadata?.refreshed && verification.metadata.newTokens) {
+          const { encryptCredential } = await import("@/lib/security/crypto");
+          await admin
+            .from("provider_connections")
+            .update({
+              encrypted_access_data: encryptCredential(JSON.stringify(verification.metadata.newTokens)),
+              updated_at: new Date().toISOString(),
+            })
+            .eq("workspace_id", workspace.id)
+            .eq("provider", row.provider);
+        }
+      } else {
+        connections[row.provider as ProviderName] = "Needs attention";
+        await admin
+          .from("provider_connections")
+          .update({ status: "needs_attention", updated_at: new Date().toISOString() })
+          .eq("workspace_id", workspace.id)
+          .eq("provider", row.provider);
+      }
+    } else {
+      connections[row.provider as ProviderName] =
+        row.status === "needs_attention" ? "Needs attention" : "Connecting";
+    }
   }
 
   return {
