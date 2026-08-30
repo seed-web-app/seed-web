@@ -2,6 +2,10 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function proxy(request: NextRequest) {
+  // A demo deployment intentionally exposes the mock onboarding and dashboard
+  // without creating Supabase auth sessions. Production mode remains protected.
+  if (process.env.SEED_DEMO_MODE === "true") return NextResponse.next();
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL; const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   if (!url || !key) return NextResponse.next();
   let response = NextResponse.next({ request });
