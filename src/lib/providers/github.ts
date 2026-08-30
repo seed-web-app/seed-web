@@ -62,6 +62,60 @@ export async function generateInstallationToken(
   return data.token;
 }
 
+/**
+ * Refresh an expiring GitHub App User Access Token using its refresh_token.
+ */
+export async function refreshGitHubUserToken(
+  refreshToken: string,
+  clientId: string,
+  clientSecret: string,
+): Promise<{
+  access_token: string;
+  refresh_token?: string;
+  expires_in?: number;
+  refresh_token_expires_in?: number;
+}> {
+  const response = await fetch("https://github.com/login/oauth/access_token", {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+    }).toString(),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => response.status.toString());
+    throw new Error(`GitHub user token refresh failed (${response.status}): ${text}`);
+  }
+
+  const data = (await response.json()) as {
+    access_token?: string;
+    refresh_token?: string;
+    expires_in?: number;
+    refresh_token_expires_in?: number;
+    error?: string;
+    error_description?: string;
+  };
+
+  if (data.error || !data.access_token) {
+    throw new Error(data.error_description || data.error || "GitHub token refresh failed");
+  }
+
+  return {
+    access_token: data.access_token,
+    refresh_token: data.refresh_token,
+    expires_in: data.expires_in,
+    refresh_token_expires_in: data.refresh_token_expires_in,
+  };
+}
+
 // ── Provider class ────────────────────────────────────────────────────────────
 
 export class GitHubSourceProvider implements SourceProvider {
@@ -72,13 +126,13 @@ export class GitHubSourceProvider implements SourceProvider {
     private branch = "main",
   ) {}
 
-  private async request<T>(path: string, init?: RequestInit): Promise<T> {
+  private async request<T>(path: string, init?: RequestInit, customToken?: string): Promise<T> {
     const response = await fetch(`https://api.github.com${path}`, {
       ...init,
       cache: "no-store",
       headers: {
         Accept: "application/vnd.github+json",
-        Authorization: `Bearer ${this.token}`,
+        Authorization: `Bearer ${customToken ?? this.token}`,
         "X-GitHub-Api-Version": "2022-11-28",
         "Content-Type": "application/json",
         ...init?.headers,
@@ -95,26 +149,40 @@ export class GitHubSourceProvider implements SourceProvider {
 
   // ── Repository ─────────────────────────────────────────────────────────────
 
-  /** Idempotent: returns existing repo or creates it. */
+  /**
+   * Idempotent: returns existing repo or creates it.
+   * If creating for a personal user account, uses the userToken on POST /user/repos.
+   * If creating for an organization, uses POST /orgs/{owner}/repos.
+   */
   async createOrReuseRepository(
     name: string,
     description = "",
+    options?: {
+      accountType?: string;
+      userToken?: string;
+    },
   ): Promise<{ id: string; url: string; defaultBranch: string }> {
-    // Check if it already exists under the owner
+    // Check if it already exists under the owner (works with either token)
     const existing = await this.request<{ id: number; html_url: string; default_branch: string }>(
       `/repos/${this.owner}/${name}`,
     ).catch(() => null);
 
     if (existing) {
+      this.repo = name;
       return { id: String(existing.id), url: existing.html_url, defaultBranch: existing.default_branch };
     }
 
+    const isOrg = options?.accountType === "Organization";
+    const endpoint = isOrg ? `/orgs/${this.owner}/repos` : "/user/repos";
+    const creationToken = isOrg ? this.token : (options?.userToken ?? this.token);
+
     const created = await this.request<{ id: number; html_url: string; default_branch: string }>(
-      "/user/repos",
+      endpoint,
       {
         method: "POST",
         body: JSON.stringify({ name, description, private: true, auto_init: true }),
       },
+      creationToken,
     );
     this.repo = name;
     return { id: String(created.id), url: created.html_url, defaultBranch: created.default_branch };

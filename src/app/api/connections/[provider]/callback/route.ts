@@ -19,6 +19,7 @@ type TokenPayload = {
   access_token: string;
   refresh_token?: string;
   expires_in?: number;
+  refresh_token_expires_in?: number;
   token_type?: string;
   team_id?: string | null;
   user_id?: string;
@@ -144,8 +145,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ prov
           installationId,
           accountLogin: installation.account.login,
           accountType: installation.account.type,
+          access_token: token.access_token,
+          refresh_token: token.refresh_token,
+          expires_in: token.expires_in,
+          refresh_token_expires_in: token.refresh_token_expires_in,
+          token_type: token.token_type,
+          obtained_at: new Date().toISOString(),
         },
-        ["contents:write", "metadata:read"],
+        ["contents:write", "metadata:read", "administration:write"],
       );
     }
 

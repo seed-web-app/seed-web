@@ -102,6 +102,12 @@ interface GitHubCreds {
   installationId: string;
   accountLogin: string;
   accountType: string;
+  access_token?: string;
+  refresh_token?: string;
+  expires_in?: number;
+  refresh_token_expires_in?: number;
+  token_type?: string;
+  obtained_at?: string;
 }
 
 interface SupabaseCreds {
@@ -388,6 +394,7 @@ export async function executeSeedRun(ctx: ExecutorContext): Promise<void> {
         );
       }
 
+      // Mint installation token for repo operations and organization repos
       try {
         gitHubToken = await generateInstallationToken(appId, privateKey, ghCreds.installationId);
       } catch (err) {
@@ -395,11 +402,51 @@ export async function executeSeedRun(ctx: ExecutorContext): Promise<void> {
         throw err;
       }
 
+      // If user account, handle user access token and refresh if needed
+      let userToken = ghCreds.access_token;
+      const isUserAccount = (ghCreds.accountType ?? "User") === "User";
+
+      if (isUserAccount && ghCreds.refresh_token && process.env.GITHUB_APP_CLIENT_ID && process.env.GITHUB_APP_CLIENT_SECRET) {
+        try {
+          const { refreshGitHubUserToken } = await import("@/lib/providers/github");
+          const refreshed = await refreshGitHubUserToken(
+            ghCreds.refresh_token,
+            process.env.GITHUB_APP_CLIENT_ID,
+            process.env.GITHUB_APP_CLIENT_SECRET,
+          );
+          userToken = refreshed.access_token;
+          // Persist refreshed user token
+          const updatedCreds: GitHubCreds = {
+            ...ghCreds,
+            access_token: refreshed.access_token,
+            refresh_token: refreshed.refresh_token ?? ghCreds.refresh_token,
+            expires_in: refreshed.expires_in,
+            refresh_token_expires_in: refreshed.refresh_token_expires_in,
+          };
+          await admin
+            .from("provider_connections")
+            .update({
+              encrypted_access_data: encryptCredential(JSON.stringify(updatedCreds)),
+              updated_at: new Date().toISOString(),
+            })
+            .eq("workspace_id", ctx.workspaceId)
+            .eq("provider", "github");
+        } catch (refreshErr) {
+          seedLog("warn", "github_user_token_refresh_failed", {
+            error: refreshErr instanceof Error ? refreshErr.message : String(refreshErr),
+          });
+        }
+      }
+
       gitHubOwner = ghCreds.accountLogin;
       const github = new GitHubSourceProvider(gitHubToken, gitHubOwner, repoName);
       const result = await github.createOrReuseRepository(
         repoName,
         `${ctx.projectName} — created by Seed`,
+        {
+          accountType: ghCreds.accountType ?? "User",
+          userToken,
+        },
       );
       repoName = repoName;
       repoUrl = result.url;
