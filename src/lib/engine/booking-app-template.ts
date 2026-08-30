@@ -567,16 +567,19 @@ alter table public.services enable row level security;
 alter table public.customers enable row level security;
 alter table public.bookings enable row level security;
 
--- Public read for services
-create policy if not exists "public_read_services" on public.services
+-- Public read for services (idempotent policy creation)
+drop policy if exists "public_read_services" on public.services;
+create policy "public_read_services" on public.services
   for select using (true);
 
 -- Public insert for bookings (form submissions)
-create policy if not exists "public_insert_bookings" on public.bookings
+drop policy if exists "public_insert_bookings" on public.bookings;
+create policy "public_insert_bookings" on public.bookings
   for insert with check (true);
 
 -- Public select own booking by email (used by booking confirmation checks)
-create policy if not exists "public_read_bookings" on public.bookings
+drop policy if exists "public_read_bookings" on public.bookings;
+create policy "public_read_bookings" on public.bookings
   for select using (true);
 `;
 

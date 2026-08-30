@@ -167,16 +167,43 @@ export class SupabaseDatabaseProvider implements DatabaseProvider {
     };
   }
 
+  private sanitizeSql(sql: string): string {
+    // 1. Convert literal escaped newlines and tabs to real whitespace characters
+    let cleaned = sql
+      .replace(/\\r\\n/g, "\n")
+      .replace(/\\n/g, "\n")
+      .replace(/\\r/g, "\n")
+      .replace(/\\t/g, "  ")
+      .trim();
+
+    // 2. Prevent invalid CREATE POLICY IF NOT EXISTS by rewriting to DROP POLICY IF EXISTS + CREATE POLICY
+    cleaned = cleaned.replace(
+      /create\s+policy\s+if\s+not\s+exists\s+("?[a-zA-Z0-9_-]+"?)(\s+on\s+[^;]+?)(;|\n|$)/gi,
+      (_match, policyName, rest) => {
+        const tableMatch = rest.match(/on\s+([a-zA-Z0-9_."]+)/i);
+        const tableName = tableMatch ? tableMatch[1] : "";
+        if (tableName) {
+          return `drop policy if exists ${policyName} on ${tableName};\ncreate policy ${policyName}${rest};`;
+        }
+        return `create policy ${policyName}${rest};`;
+      },
+    );
+
+    return cleaned;
+  }
+
   async runMigration(migration: { name: string; sql: string }) {
+    const cleanedSql = this.sanitizeSql(migration.sql);
+
     const guard = validateProposal({
       request: `Apply database migration ${migration.name}`,
-      proposedFiles: [{ path: `${migration.name}.sql`, content: migration.sql }],
+      proposedFiles: [{ path: `${migration.name}.sql`, content: cleanedSql }],
     });
     if (!guard.passed)
       throw new Error(
-        "Seed Guard blocked this database migration. The SQL contains unsafe patterns.",
+        `Seed Guard blocked this database migration: ${guard.violations?.map((v) => v.reason).join("; ") ?? "Unsafe SQL pattern"}`,
       );
-    await this.query(migration.sql);
+    await this.query(cleanedSql);
   }
 
   async verifyMigration(expectedTables: string[]) {

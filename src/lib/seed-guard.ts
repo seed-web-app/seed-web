@@ -54,6 +54,17 @@ const RULES: RuleDefinition[] = [
     },
   },
   {
+    id: "INVALID_SQL_SYNTAX",
+    name: "Invalid SQL Syntax",
+    severity: "critical",
+    reason: "PostgreSQL does not support CREATE POLICY IF NOT EXISTS syntax.",
+    suggested_fix: "Use DROP POLICY IF EXISTS \"name\" ON table; followed by CREATE POLICY \"name\" ON table ...",
+    check: ({ request, content }) => {
+      const text = `${request}\n${content ?? ""}`;
+      return /create\s+policy\s+if\s+not\s+exists/i.test(text);
+    },
+  },
+  {
     id: "HARDCODED_API_KEY",
     name: "Hardcoded API Key / Secret",
     severity: "critical",
