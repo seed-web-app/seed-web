@@ -27,11 +27,11 @@ describe("verifyStoredConnection", () => {
     expect(result.error).toContain("No GitHub App installation ID stored");
   });
 
-  it("fails gracefully when Vercel token is missing or invalid", async () => {
+  it("fails gracefully when Supabase token is missing or invalid", async () => {
     process.env.SEED_CREDENTIAL_ENCRYPTION_KEY =
       process.env.SEED_CREDENTIAL_ENCRYPTION_KEY || "f/bXWWy7oqul0Xg/pOKx1Tz3fUdDO738s5XOmcoOkSs=";
-    const encrypted = encryptCredential(JSON.stringify({ access_token: "invalid-token" }));
-    const result = await verifyStoredConnection("vercel", encrypted);
+    const encrypted = encryptCredential(JSON.stringify({ access_token: "invalid-supabase-token" }));
+    const result = await verifyStoredConnection("supabase", encrypted);
     expect(result.valid).toBe(false);
     expect(result.error).toBeDefined();
   });

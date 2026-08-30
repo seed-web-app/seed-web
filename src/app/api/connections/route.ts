@@ -128,7 +128,10 @@ export async function POST(request: Request) {
     }
   } else if (provider === "supabase") {
     if (process.env.SUPABASE_OAUTH_CLIENT_ID && codeChallenge) {
-      authorizationUrl = `https://api.supabase.com/v1/oauth/authorize?client_id=${process.env.SUPABASE_OAUTH_CLIENT_ID}&redirect_uri=${encodeURIComponent(callback)}&response_type=code&state=${state}&code_challenge=${encodeURIComponent(codeChallenge)}&code_challenge_method=S256`;
+      const scopeParam = process.env.SUPABASE_OAUTH_SCOPES
+        ? `&scope=${encodeURIComponent(process.env.SUPABASE_OAUTH_SCOPES)}`
+        : "";
+      authorizationUrl = `https://api.supabase.com/v1/oauth/authorize?client_id=${process.env.SUPABASE_OAUTH_CLIENT_ID}&redirect_uri=${encodeURIComponent(callback)}&response_type=code&state=${state}&code_challenge=${encodeURIComponent(codeChallenge)}&code_challenge_method=S256${scopeParam}`;
     }
   } else if (provider === "vercel") {
     if (process.env.VERCEL_INTEGRATION_SLUG) {
