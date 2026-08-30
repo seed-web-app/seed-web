@@ -47,7 +47,21 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // Rule 2: Protected routes on any domain
+  // Rule 2: Rewrite uppercase / legacy doc routes to canonical lowercase pages
+  if (pathname === "/EULA") {
+    return NextResponse.rewrite(new URL("/eula", request.url));
+  }
+  if (pathname === "/Privacy") {
+    return NextResponse.rewrite(new URL("/privacy", request.url));
+  }
+  if (pathname === "/Support") {
+    return NextResponse.rewrite(new URL("/support", request.url));
+  }
+  if (pathname === "/docs" || pathname === "/documentation") {
+    return NextResponse.rewrite(new URL("/doc", request.url));
+  }
+
+  // Rule 3: Protected routes on any domain
   const protectedRoute =
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/onboarding") ||
