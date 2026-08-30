@@ -4,6 +4,7 @@ import { randomBytes } from "crypto";
 import { cookies } from "next/headers";
 import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
 import { encryptCredential } from "@/lib/security/crypto";
+import OpenAI from "openai";
 const connectionRequest = z.object({ provider: z.enum(["github", "supabase", "vercel", "openai"]), workspaceId: z.string().uuid().optional(), credential: z.string().min(20).max(500).optional() });
 export async function POST(request: Request) {
   const parsed = connectionRequest.safeParse(await request.json()); if (!parsed.success) return NextResponse.json({ message: "That connection request is not valid." }, { status: 400 });
@@ -14,7 +15,9 @@ export async function POST(request: Request) {
     const supabase=await createSupabaseServerClient(); const admin=createSupabaseAdminClient(); if(!supabase||!admin) return NextResponse.json({configured:false,message:"Seed's secure credential store is not configured yet."},{status:503});
     const {data:{user}}=await supabase.auth.getUser(); if(!user) return NextResponse.json({message:"Sign in again to continue."},{status:401});
     const {data:owned}=await admin.from("workspaces").select("id,profiles!inner(auth_user_id)").eq("id",workspaceId).eq("profiles.auth_user_id",user.id).maybeSingle(); if(!owned) return NextResponse.json({message:"You do not have access to this workspace."},{status:403});
-    const encrypted=encryptCredential(JSON.stringify({apiKey:credential})); await admin.from("provider_connections").upsert({workspace_id:workspaceId,provider:"openai",encrypted_access_data:encrypted,status:"connected",connected_at:new Date().toISOString()},{onConflict:"workspace_id,provider"});
+    try { await new OpenAI({apiKey:credential,maxRetries:0,timeout:10_000}).models.list(); } catch { return NextResponse.json({message:"OpenAI could not validate that API key. Check the key and its project access."},{status:400}); }
+    const encrypted=encryptCredential(JSON.stringify({apiKey:credential})); const {error}=await admin.from("provider_connections").upsert({workspace_id:workspaceId,provider:"openai",encrypted_access_data:encrypted,status:"connected",connected_at:new Date().toISOString()},{onConflict:"workspace_id,provider"});
+    if(error) return NextResponse.json({message:"Seed could not store the key securely. Please try again."},{status:500});
     return NextResponse.json({configured:true,message:"Seed AI is active. Your key was encrypted and stored server-side."});
   }
   if(!workspaceId)return NextResponse.json({configured:false,message:"Select a workspace before connecting this account."},{status:400});

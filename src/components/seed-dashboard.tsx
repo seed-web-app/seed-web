@@ -1,43 +1,1142 @@
 "use client";
-import { FormEvent, useState } from "react";
+
 import Link from "next/link";
-import { Activity, ArrowRight, BookOpen, Bot, Building2, CalendarDays, Check, ChevronDown, CircleHelp, Cloud, Code2, ContactRound, ExternalLink, FileCode2, FolderKanban, Gauge, Globe2, Home, Image as ImageIcon, LayoutDashboard, LoaderCircle, LockKeyhole, Menu, MoreHorizontal, PanelLeftClose, Plus, Rocket, Search, Settings, ShieldCheck, Sparkles, Users, X, type LucideIcon } from "lucide-react";
-import type { DashboardContext } from "@/lib/dashboard-context";
+import { type FormEvent, type ReactNode, useState } from "react";
+import {
+  Activity,
+  ArrowRight,
+  BookOpen,
+  Bot,
+  Building2,
+  CalendarDays,
+  Check,
+  Cloud,
+  ContactRound,
+  ExternalLink,
+  FileCode2,
+  FolderKanban,
+  Globe2,
+  Home,
+  Image as ImageIcon,
+  LayoutDashboard,
+  LoaderCircle,
+  LockKeyhole,
+  LogOut,
+  Menu,
+  PanelLeftClose,
+  Plus,
+  Rocket,
+  Settings,
+  ShieldCheck,
+  Sparkles,
+  Users,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 
-type Identity={id:string;name:string;email:string;avatarUrl:string|null;demo:boolean};
-type View="home"|"projects"|"overview"|"website"|"customers"|"bookings"|"media"|"ask"|"settings";
-type Connection={id:"github"|"supabase"|"vercel"|"openai";label:string;detail:string;status:"Not connected"|"Connecting"|"Connected"|"Needs attention";icon:LucideIcon};
-type PlanStep={title:string;kind:string};
-const mainNav:[View,string,LucideIcon][]=[["home","Home",Home],["projects","Projects",FolderKanban]];
-const projectNav:[View,string,LucideIcon][]=[["overview","Overview",LayoutDashboard],["website","Website",Globe2],["customers","Customers",Users],["bookings","Bookings",CalendarDays],["media","Media",ImageIcon]];
-const bottomNav:[View,string,LucideIcon][]=[["ask","Ask Seed",Sparkles],["settings","Settings",Settings]];
-const initialConnections:Connection[]=[{id:"github",label:"Project files",detail:"Powered by GitHub",status:"Not connected",icon:FileCode2},{id:"supabase",label:"Database",detail:"Powered by Supabase",status:"Not connected",icon:Building2},{id:"vercel",label:"Hosting",detail:"Powered by Vercel",status:"Not connected",icon:Cloud},{id:"openai",label:"Seed AI",detail:"Uses your OpenAI account",status:"Not connected",icon:Bot}];
-const bookingSeed=[{id:"BK-1042",name:"Aarav Mehta",service:"Morning yoga",date:"2 Sep, 8:00 AM",status:"Confirmed"},{id:"BK-1041",name:"Riya Kapoor",service:"Private session",date:"2 Sep, 11:30 AM",status:"New"},{id:"BK-1040",name:"Kabir Shah",service:"Evening yoga",date:"1 Sep, 6:00 PM",status:"Confirmed"},{id:"BK-1039",name:"Meera Joshi",service:"Morning yoga",date:"31 Aug, 8:00 AM",status:"Completed"}];
+import { signOut } from "@/app/auth/actions";
+import type {
+  DashboardContext,
+  DashboardProject,
+  DashboardRun,
+  ProjectStatus,
+} from "@/lib/dashboard-context";
 
-export function SeedDashboard({identity,context}:{identity:Identity;context:DashboardContext}) { const [view,setView]=useState<View>("home"); const [sidebarOpen,setSidebarOpen]=useState(false); const [connections,setConnections]=useState(initialConnections.map(connection=>({...connection,status:context.connections[connection.id]??"Not connected"})as Connection)); const [connectionModal,setConnectionModal]=useState<Connection|null>(null); const [apiKey,setApiKey]=useState(""); const [notice,setNotice]=useState<string|null>(identity.demo?"Demo mode is on. Connect Supabase to save real projects.":null); const [request,setRequest]=useState(""); const [plan,setPlan]=useState<PlanStep[]|null>(null); const [planning,setPlanning]=useState(false); const [bookings,setBookings]=useState(bookingSeed); const projectName=context.projectName;
-  const navigate=(target:View)=>{setView(target);setSidebarOpen(false)};
-  async function connect(connection:Connection,event?:FormEvent){event?.preventDefault();setConnections(items=>items.map(item=>item.id===connection.id?{...item,status:"Connecting"}:item));const response=await fetch("/api/connections",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({provider:connection.id,workspaceId:context.demo?undefined:context.workspaceId,...(connection.id==="openai"&&apiKey?{credential:apiKey}: {})})});const data=await response.json() as {message?:string;configured?:boolean;authorizationUrl?:string|null};setApiKey("");setConnectionModal(null);setConnections(items=>items.map(item=>item.id===connection.id?{...item,status:data.configured?"Connected":"Connecting"}:item));setNotice(data.message??"Connection setup started.");if(data.authorizationUrl)window.location.assign(data.authorizationUrl)}
-  async function askSeed(event:FormEvent){event.preventDefault();if(!request.trim())return;setPlanning(true);setPlan(null);const response=await fetch("/api/seed/plan",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({request,projectId:context.demo?undefined:context.projectId})});const data=await response.json() as {message?:string;plan?:{steps:PlanStep[]}};setPlanning(false);setPlan(data.plan?.steps??[{title:"Read the latest code, database, and hosting state",kind:"inspect"},{title:"Load the booking, database, and admin skills",kind:"inspect"},{title:"Create the website and booking data changes",kind:"generate"},{title:"Run Seed Guard, type checks, and tests",kind:"validate"},{title:"Create a private preview for approval",kind:"deploy"}]);setNotice(data.message??"Your safe build plan is ready.")}
-  function navItem([id,label,Icon]:[View,string,LucideIcon]){return <button className={`app-nav-item ${view===id?"active":""}`} onClick={()=>navigate(id)} key={id}><Icon size={17}/><span>{label}</span>{id==="bookings"&&<b>2</b>}</button>}
-  return <div className="app-shell"><button className="mobile-menu" onClick={()=>setSidebarOpen(true)} aria-label="Open menu"><Menu/></button>{sidebarOpen&&<button className="mobile-scrim" onClick={()=>setSidebarOpen(false)} aria-label="Close menu"/>}<aside className={`app-sidebar ${sidebarOpen?"open":""}`}><div className="sidebar-head"><Link className="brand" href="/">seed<span>.</span></Link><button onClick={()=>setSidebarOpen(false)}><PanelLeftClose size={18}/></button></div><div className="app-nav"><p>Workspace</p>{mainNav.map(navItem)}<p>{projectName}</p>{projectNav.map(navItem)}<div className="nav-spacer"/>{bottomNav.map(navItem)}</div><div className="user-chip"><div className="avatar">{identity.name.split(" ").map(part=>part[0]).join("").slice(0,2).toUpperCase()}</div><span><b>{identity.name}</b><small>{identity.demo?"Local demo":"Personal workspace"}</small></span><ChevronDown size={15}/></div></aside>
-  <main className="app-main"><header className="app-topbar"><div><span className="muted">Projects</span><span className="slash">/</span><b>{projectName}</b></div><div className="top-actions"><button className="icon-button" aria-label="Search"><Search size={17}/></button><button className="help"><CircleHelp size={15}/>Help</button><span className={`environment ${identity.demo?"demo":"live"}`}>{identity.demo?"Demo":"Live"}</span></div></header>
-  {view==="home"&&<HomeView name={identity.name} navigate={navigate} setRequest={setRequest} />}{view==="projects"&&<ProjectsView navigate={navigate}/>} {view==="overview"&&<OverviewView navigate={navigate}/>} {view==="website"&&<WebsiteView/>} {view==="customers"&&<CustomersView/>} {view==="bookings"&&<BookingsView bookings={bookings} setBookings={setBookings}/>} {view==="media"&&<MediaView/>} {view==="ask"&&<AskView request={request} setRequest={setRequest} submit={askSeed} planning={planning} plan={plan}/>} {view==="settings"&&<SettingsView connections={connections} open={setConnectionModal}/>}</main>
-  {connectionModal&&<ConnectionModal connection={connectionModal} apiKey={apiKey} setApiKey={setApiKey} close={()=>setConnectionModal(null)} connect={connect}/>} {notice&&<button className="notice" onClick={()=>setNotice(null)}><Check size={16}/>{notice}<X size={14}/></button>}</div>;
+type Identity = {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl: string | null;
+  demo: boolean;
+};
+
+type View =
+  | "home"
+  | "projects"
+  | "overview"
+  | "website"
+  | "customers"
+  | "bookings"
+  | "media"
+  | "ask"
+  | "settings";
+
+type Connection = {
+  id: "github" | "supabase" | "vercel" | "openai";
+  label: string;
+  detail: string;
+  status: "Not connected" | "Connecting" | "Connected" | "Needs attention";
+  icon: LucideIcon;
+};
+
+type PlanStep = { title: string; kind: string };
+
+const mainNav: [View, string, LucideIcon][] = [
+  ["home", "Home", Home],
+  ["projects", "Projects", FolderKanban],
+];
+
+const projectNav: [View, string, LucideIcon][] = [
+  ["overview", "Overview", LayoutDashboard],
+  ["website", "Website", Globe2],
+  ["customers", "Customers", Users],
+  ["bookings", "Bookings", CalendarDays],
+  ["media", "Media", ImageIcon],
+];
+
+const bottomNav: [View, string, LucideIcon][] = [
+  ["ask", "Ask Seed", Sparkles],
+  ["settings", "Settings", Settings],
+];
+
+const connectionCatalog: Connection[] = [
+  {
+    id: "github",
+    label: "Project files",
+    detail: "Powered by GitHub",
+    status: "Not connected",
+    icon: FileCode2,
+  },
+  {
+    id: "supabase",
+    label: "Database",
+    detail: "Powered by Supabase",
+    status: "Not connected",
+    icon: Building2,
+  },
+  {
+    id: "vercel",
+    label: "Hosting",
+    detail: "Powered by Vercel",
+    status: "Not connected",
+    icon: Cloud,
+  },
+  {
+    id: "openai",
+    label: "Seed AI",
+    detail: "Uses your OpenAI account",
+    status: "Not connected",
+    icon: Bot,
+  },
+];
+
+function statusLabel(status: ProjectStatus) {
+  return status.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
 }
 
-function PageTitle({eyebrow,title,copy,action}:{eyebrow?:string;title:string;copy:string;action?:React.ReactNode}){return <div className="page-title"><div>{eyebrow&&<span className="page-eyebrow">{eyebrow}</span>}<h1>{title}</h1><p>{copy}</p></div>{action}</div>}
-function HomeView({name,navigate,setRequest}:{name:string;navigate:(view:View)=>void;setRequest:(value:string)=>void}){const quick=(value:string)=>{setRequest(value);navigate("ask")};return <><PageTitle title={`Good morning, ${name.split(" ")[0]}.`} copy="Your website is healthy and ready for its next update." action={<button className="primary-action" onClick={()=>navigate("ask")}><Sparkles size={16}/>Ask Seed</button>}/><section className="stats-grid"><Metric icon={Globe2} label="Website" value="Online" detail="Last checked 2 min ago" good/><Metric icon={CalendarDays} label="Bookings" value="12" detail="4 this week"/><Metric icon={ContactRound} label="Customers" value="38" detail="+6 this month"/><Metric icon={Activity} label="Project health" value="Good" detail="All checks passed" good/></section><section className="home-grid"><article className="dark-panel"><span className="sparkle-orb"><Sparkles/></span><h2>What would you like to change?</h2><p>Tell Seed in simple language. You’ll see a plan before anything is published.</p><div className="quick-prompts"><button onClick={()=>quick("Change the hero heading")}>Change the hero heading <ArrowRight size={15}/></button><button onClick={()=>quick("Make phone number compulsory")}>Make phone number compulsory <ArrowRight size={15}/></button><button onClick={()=>quick("Show me this month's bookings")}>Show this month’s bookings <ArrowRight size={15}/></button></div></article><article className="panel"><div className="panel-heading"><h3>Recent activity</h3><button><MoreHorizontal size={18}/></button></div><Timeline/></article></section><section className="panel lower-panel"><div className="panel-heading"><div><h3>Your setup</h3><p>Connect everything once. Seed handles it from there.</p></div><button className="secondary-button" onClick={()=>navigate("settings")}>Manage connections</button></div><div className="setup-row"><Setup icon={FileCode2} label="Project files" status="Needs connection"/><Setup icon={Building2} label="Database" status="Needs connection"/><Setup icon={Cloud} label="Hosting" status="Needs connection"/><Setup icon={Bot} label="Seed AI" status="Needs connection"/></div></section></>}
-function Metric({icon:Icon,label,value,detail,good}:{icon:LucideIcon;label:string;value:string;detail:string;good?:boolean}){return <article className="metric panel"><div className="metric-icon"><Icon size={18}/></div><span>{label}</span><strong className={good?"good":""}>{good&&<i/>}{value}</strong><small>{detail}</small></article>}
-function Timeline(){return <div className="timeline"><div><i className="done"><Check size={12}/></i><span><b>Seed Guard checks passed</b><small>Today, 10:42 AM</small></span></div><div><i className="done"><Rocket size={12}/></i><span><b>Website preview created</b><small>Yesterday, 5:18 PM</small></span></div><div><i><Code2 size={12}/></i><span><b>Project foundation created</b><small>30 Aug, 2:34 PM</small></span></div></div>}
-function Setup({icon:Icon,label,status}:{icon:LucideIcon;label:string;status:string}){return <div><span><Icon size={17}/></span><p><b>{label}</b><small>{status}</small></p></div>}
+function projectTypeLabel(projectType: string) {
+  return projectType.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
+}
 
-function ProjectsView({navigate}:{navigate:(view:View)=>void}){return <><PageTitle eyebrow="Workspace" title="Projects" copy="Every website stays in the accounts you own." action={<Link className="primary-action" href="/onboarding"><Plus size={16}/>New project</Link>}/><section className="projects-grid"><button className="project-card" onClick={()=>navigate("overview")}><div className="project-thumb yoga-thumb"><span>Shikha<br/><em>Yoga</em></span></div><div className="project-card-body"><div><h3>Shikha Yoga</h3><span className="status-pill live">Online</span></div><p>Booking website · Updated today</p><footer><span>shikha-yoga.vercel.app</span><ArrowRight size={16}/></footer></div></button><Link className="new-project-card" href="/onboarding"><Plus/><b>Create another project</b><span>Business, lead or booking website</span></Link></section></>}
-function OverviewView({navigate}:{navigate:(view:View)=>void}){return <><PageTitle eyebrow="Shikha Yoga" title="Project overview" copy="Everything important, without the technical noise." action={<button className="primary-action" onClick={()=>navigate("ask")}><Sparkles size={16}/>Make a change</button>}/><section className="overview-detail"><article className="panel website-card"><div className="browser-mini"><div><i/><i/><i/></div><span>shikhayoga.in</span></div><div className="website-preview"><small>MOVE · BREATHE · BELONG</small><b>Find your balance,<br/><em>one breath at a time.</em></b><button>Book a class</button></div><footer><div><span className="status-pill live">Online</span><p><b>shikhayoga.in</b><small>Published today at 10:44 AM</small></p></div><button onClick={()=>navigate("website")}>View website <ExternalLink size={14}/></button></footer></article><article className="panel health-card"><div className="health-ring"><Gauge size={30}/><strong>Good</strong></div><h3>Everything looks healthy</h3><p>Website, database and booking form are working normally.</p><ul><li><Check/>Website is reachable</li><li><Check/>Booking form is working</li><li><Check/>Security checks passed</li></ul></article></section><section className="stats-grid compact"><Metric icon={CalendarDays} label="Bookings this month" value="12" detail="3 awaiting confirmation"/><Metric icon={Users} label="Total customers" value="38" detail="6 new this month"/><Metric icon={Activity} label="Last Seed run" value="Passed" detail="5 checks completed" good/><Metric icon={Rocket} label="Latest publish" value="Today" detail="10:44 AM"/></section></>}
-function WebsiteView(){return <><PageTitle eyebrow="Shikha Yoga" title="Website" copy="See what your customers see and check publishing health." action={<button className="primary-action"><ExternalLink size={16}/>Open live website</button>}/><section className="website-layout"><article className="panel full-preview"><div className="browser-bar"><div><i/><i/><i/></div><span><LockKeyhole size={12}/>shikhayoga.in</span></div><div className="site-nav"><b>SHIKHA YOGA</b><span>Home　Classes　About　Contact</span><button>Book a class</button></div><div className="site-hero"><p>YOGA FOR EVERY BODY</p><h2>Find strength.<br/><em>Make space.</em></h2><span>Thoughtful yoga classes in New Delhi for beginners and experienced practitioners.</span><button>Explore classes</button></div></article><aside className="panel publish-panel"><span className="status-pill live">Online</span><h3>Your website is live</h3><p>Visitors are seeing the latest approved version.</p><dl><div><dt>Last published</dt><dd>Today, 10:44 AM</dd></div><div><dt>Website address</dt><dd>shikhayoga.in</dd></div><div><dt>Security</dt><dd><Check size={14}/>Protected</dd></div></dl><button className="secondary-button">View publish history</button></aside></section></>}
-const customers=[{name:"Aarav Mehta",email:"aarav@example.com",bookings:3,last:"2 Sep 2026"},{name:"Riya Kapoor",email:"riya@example.com",bookings:1,last:"2 Sep 2026"},{name:"Kabir Shah",email:"kabir@example.com",bookings:4,last:"1 Sep 2026"},{name:"Meera Joshi",email:"meera@example.com",bookings:2,last:"31 Aug 2026"},{name:"Naina Singh",email:"naina@example.com",bookings:2,last:"28 Aug 2026"}];
-function CustomersView(){return <><PageTitle eyebrow="Shikha Yoga" title="Customers" copy="People who have booked or contacted your business." action={<button className="secondary-button">Export list</button>}/><article className="panel data-panel"><div className="table-tools"><label><Search size={16}/><input placeholder="Search customers"/></label><span>38 customers</span></div><div className="data-table customer-table"><div className="table-head"><span>Customer</span><span>Bookings</span><span>Last activity</span><span/></div>{customers.map(customer=><div className="table-row" key={customer.email}><span className="person"><i>{customer.name.split(" ").map(p=>p[0]).join("")}</i><b>{customer.name}<small>{customer.email}</small></b></span><span>{customer.bookings}</span><span>{customer.last}</span><button><MoreHorizontal size={17}/></button></div>)}</div></article></>}
-function BookingsView({bookings,setBookings}:{bookings:typeof bookingSeed;setBookings:React.Dispatch<React.SetStateAction<typeof bookingSeed>>}){return <><PageTitle eyebrow="Shikha Yoga" title="Bookings" copy="View and manage every customer booking." action={<button className="primary-action"><Plus size={16}/>Add booking</button>}/><section className="booking-summary"><div><span>Needs attention</span><b>2</b><small>New requests</small></div><div><span>Today</span><b>3</b><small>Upcoming classes</small></div><div><span>This month</span><b>12</b><small>Total bookings</small></div></section><article className="panel data-panel"><div className="table-tools"><label><Search size={16}/><input placeholder="Search bookings"/></label><button className="secondary-button">All bookings <ChevronDown size={14}/></button></div><div className="data-table booking-table"><div className="table-head"><span>Booking</span><span>Service</span><span>Date & time</span><span>Status</span></div>{bookings.map(booking=><div className="table-row" key={booking.id}><span className="person"><i>{booking.name.split(" ").map(p=>p[0]).join("")}</i><b>{booking.name}<small>{booking.id}</small></b></span><span>{booking.service}</span><span>{booking.date}</span><select value={booking.status} onChange={event=>setBookings(items=>items.map(item=>item.id===booking.id?{...item,status:event.target.value}:item))} className={`booking-status ${booking.status.toLowerCase()}`}><option>New</option><option>Confirmed</option><option>Completed</option><option>Cancelled</option></select></div>)}</div></article></>}
-function MediaView(){return <><PageTitle eyebrow="Shikha Yoga" title="Media" copy="Images available for Seed to use on your website." action={<button className="primary-action"><Plus size={16}/>Upload images</button>}/><section className="media-grid">{["Studio entrance","Morning class","Meditation room","Private session","Community class","Yoga props"].map((name,index)=><article className={`media-item media-${index+1}`} key={name}><div><ImageIcon/></div><b>{name}</b><small>JPG · {1.2+index/10} MB</small><button><MoreHorizontal/></button></article>)}</section></>}
-function AskView({request,setRequest,submit,planning,plan}:{request:string;setRequest:(v:string)=>void;submit:(e:FormEvent)=>void;planning:boolean;plan:PlanStep[]|null}){return <><PageTitle eyebrow="Seed AI" title="Ask Seed" copy="Describe what you need. Seed checks everything before changing your project."/><section className="ask-layout"><article className="chat-panel panel"><div className="chat-empty"><div className="seed-mark"><Sparkles/></div><h2>What should we work on?</h2><p>Try “Add phone number to the booking form and make it required.”</p><div><button onClick={()=>setRequest("Change the hero heading")}>Change my heading</button><button onClick={()=>setRequest("Add phone number to the booking form")}>Edit the booking form</button><button onClick={()=>setRequest("Why did my last deployment fail?")}>Check a problem</button></div></div><form className="chat-input" onSubmit={submit}><textarea value={request} onChange={event=>setRequest(event.target.value)} placeholder="Ask Seed anything about this project…" rows={3}/><footer><span><ShieldCheck size={14}/>Guarded by Seed</span><button disabled={planning||!request.trim()}>{planning?<LoaderCircle className="spin" size={17}/>:<ArrowRight size={17}/>}</button></footer></form></article><aside className="panel run-panel"><h3>Build plan</h3>{!plan&&!planning&&<div className="empty-plan"><BookOpen/><p>Your step-by-step plan will appear here before Seed makes changes.</p></div>}{planning&&<div className="planning"><LoaderCircle className="spin"/><b>Reading your request…</b><span>Seed is choosing skills and checking policies.</span></div>}{plan&&<><p className="plan-intro">Seed will use the latest project state before changing anything.</p><div className="run-steps">{plan.map((step,index)=><div key={`${step.title}-${index}`}><i>{index+1}</i><span><b>{step.title}</b><small>{step.kind}</small></span></div>)}</div><button className="primary-action full"><Rocket size={16}/>Approve and create preview</button><small className="approval-note"><ShieldCheck size={13}/>Production publishing still requires all checks to pass.</small></>}</aside></section></>}
-function SettingsView({connections,open}:{connections:Connection[];open:(c:Connection)=>void}){return <><PageTitle eyebrow="Workspace settings" title="Connections" copy="Seed works in services you own. You can disconnect them anytime."/><article className="panel connection-page"><div className="connection-intro"><LockKeyhole/><div><h3>Your accounts stay yours</h3><p>Seed receives only the access needed to manage this project. Passwords are never requested or stored.</p></div></div>{connections.map(connection=><div className="connection-row" key={connection.id}><span className="provider-logo"><connection.icon/></span><div><b>{connection.label}</b><small>{connection.detail}</small></div><span className={`status-pill ${connection.status==="Connected"?"live":connection.status==="Connecting"?"warning":"idle"}`}>{connection.status}</span><button className="secondary-button" onClick={()=>open(connection)}>{connection.status==="Not connected"?"Connect":"Continue"}</button></div>)}</article><article className="panel advanced-card"><div><h3>Advanced settings</h3><p>Technical identifiers, run logs and developer details.</p></div><button className="secondary-button">Open developer mode</button></article></>}
-function ConnectionModal({connection,apiKey,setApiKey,close,connect}:{connection:Connection;apiKey:string;setApiKey:(v:string)=>void;close:()=>void;connect:(c:Connection,e?:FormEvent)=>void}){return <div className="modal-backdrop" onMouseDown={close}><form className="modal" onSubmit={event=>connect(connection,event)} onMouseDown={event=>event.stopPropagation()}><button className="modal-close" type="button" onClick={close}><X/></button><span className="provider-logo large"><connection.icon/></span><p className="eyebrow">{connection.label}</p><h2>{connection.id==="openai"?"Activate Seed AI":`Connect ${connection.label.toLowerCase()}`}</h2><p>{connection.id==="openai"?"Seed uses your OpenAI API account to understand requests, build features and fix your app. Your key is encrypted and never sent back to the browser.":"You’ll be sent to the provider to approve access. Seed never asks for your password."}</p>{connection.id==="openai"&&<label className="field-label">OpenAI API key<input type="password" value={apiKey} onChange={event=>setApiKey(event.target.value)} placeholder="sk-…" autoComplete="off" required/></label>}<button className="primary-action full" type="submit">{connection.id==="openai"?"Save securely":"Continue to authorize"}<ArrowRight size={16}/></button><small className="modal-safe"><ShieldCheck size={13}/>Minimum access · Disconnect anytime · Audited actions</small></form></div>}
+function formatTimestamp(value: string) {
+  return `${new Intl.DateTimeFormat("en", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "UTC",
+  }).format(new Date(value))} UTC`;
+}
+
+function statusClass(status: ProjectStatus) {
+  if (status === "live") return "live";
+  if (status === "needs_attention" || status === "building") return "warning";
+  return "idle";
+}
+
+export function SeedDashboard({
+  identity,
+  context,
+}: {
+  identity: Identity;
+  context: DashboardContext;
+}) {
+  const [view, setView] = useState<View>("home");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [connections, setConnections] = useState(
+    connectionCatalog.map(
+      (connection) =>
+        ({
+          ...connection,
+          status: context.connections[connection.id] ?? "Not connected",
+        }) as Connection,
+    ),
+  );
+  const [connectionModal, setConnectionModal] = useState<Connection | null>(null);
+  const [apiKey, setApiKey] = useState("");
+  const [notice, setNotice] = useState<string | null>(
+    identity.demo ? "Demo mode is on. Changes are not persisted." : null,
+  );
+  const [request, setRequest] = useState("");
+  const [plan, setPlan] = useState<PlanStep[] | null>(null);
+  const [planning, setPlanning] = useState(false);
+
+  const projectName = context.projectName || "No project selected";
+  const openAiConnected =
+    connections.find((connection) => connection.id === "openai")?.status === "Connected";
+
+  const navigate = (target: View) => {
+    setView(target);
+    setSidebarOpen(false);
+  };
+
+  async function connect(connection: Connection, event?: FormEvent) {
+    event?.preventDefault();
+    const previousStatus = connection.status;
+    setConnections((items) =>
+      items.map((item) =>
+        item.id === connection.id ? { ...item, status: "Connecting" } : item,
+      ),
+    );
+
+    try {
+      const response = await fetch("/api/connections", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          provider: connection.id,
+          workspaceId: context.demo ? undefined : context.workspaceId,
+          ...(connection.id === "openai" && apiKey ? { credential: apiKey } : {}),
+        }),
+      });
+      const data = (await response.json()) as {
+        message?: string;
+        configured?: boolean;
+        authorizationUrl?: string | null;
+      };
+
+      if (!response.ok) {
+        setConnections((items) =>
+          items.map((item) =>
+            item.id === connection.id ? { ...item, status: previousStatus } : item,
+          ),
+        );
+        setNotice(data.message ?? "Seed could not start that connection.");
+        return;
+      }
+
+      setApiKey("");
+      setConnectionModal(null);
+      setConnections((items) =>
+        items.map((item) =>
+          item.id === connection.id
+            ? { ...item, status: data.configured ? "Connected" : "Connecting" }
+            : item,
+        ),
+      );
+      setNotice(data.message ?? "Connection setup started.");
+      if (data.authorizationUrl) window.location.assign(data.authorizationUrl);
+    } catch {
+      setConnections((items) =>
+        items.map((item) =>
+          item.id === connection.id ? { ...item, status: previousStatus } : item,
+        ),
+      );
+      setNotice("Seed could not reach the connection service. Please try again.");
+    }
+  }
+
+  async function askSeed(event: FormEvent) {
+    event.preventDefault();
+    if (!request.trim() || !openAiConnected) return;
+    setPlanning(true);
+    setPlan(null);
+
+    try {
+      const response = await fetch("/api/seed/plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ request, projectId: context.projectId }),
+      });
+      const data = (await response.json()) as {
+        message?: string;
+        plan?: { steps: PlanStep[] };
+      };
+
+      if (!response.ok || !data.plan) {
+        setNotice(data.message ?? "Seed could not prepare that plan.");
+        return;
+      }
+
+      setPlan(data.plan.steps);
+      setNotice(data.message ?? "Your safe build plan is ready.");
+    } catch {
+      setNotice("Seed AI could not be reached. Please try again.");
+    } finally {
+      setPlanning(false);
+    }
+  }
+
+  function navItem([id, label, Icon]: [View, string, LucideIcon]) {
+    return (
+      <button
+        className={`app-nav-item ${view === id ? "active" : ""}`}
+        onClick={() => navigate(id)}
+        key={id}
+      >
+        <Icon size={17} />
+        <span>{label}</span>
+        {id === "bookings" && context.counts.bookings > 0 && (
+          <b>{context.counts.bookings}</b>
+        )}
+      </button>
+    );
+  }
+
+  return (
+    <div className="app-shell">
+      <button
+        className="mobile-menu"
+        onClick={() => setSidebarOpen(true)}
+        aria-label="Open menu"
+      >
+        <Menu />
+      </button>
+      {sidebarOpen && (
+        <button
+          className="mobile-scrim"
+          onClick={() => setSidebarOpen(false)}
+          aria-label="Close menu"
+        />
+      )}
+      <aside className={`app-sidebar ${sidebarOpen ? "open" : ""}`}>
+        <div className="sidebar-head">
+          <Link className="brand" href="/">
+            seed<span>.</span>
+          </Link>
+          <button onClick={() => setSidebarOpen(false)} aria-label="Close menu">
+            <PanelLeftClose size={18} />
+          </button>
+        </div>
+        <div className="app-nav">
+          <p>Workspace</p>
+          {mainNav.map(navItem)}
+          <p>{projectName}</p>
+          {projectNav.map(navItem)}
+          <div className="nav-spacer" />
+          {bottomNav.map(navItem)}
+        </div>
+        <div className="user-chip">
+          <div className="avatar">
+            {identity.name
+              .split(" ")
+              .map((part) => part[0])
+              .join("")
+              .slice(0, 2)
+              .toUpperCase()}
+          </div>
+          <span>
+            <b>{identity.name}</b>
+            <small>{identity.demo ? "Local demo" : context.workspaceName}</small>
+          </span>
+          {!identity.demo && (
+            <form action={signOut}>
+              <button className="sign-out" type="submit" aria-label="Sign out">
+                <LogOut size={15} />
+              </button>
+            </form>
+          )}
+        </div>
+      </aside>
+
+      <main className="app-main">
+        <header className="app-topbar">
+          <div>
+            <span className="muted">Projects</span>
+            <span className="slash">/</span>
+            <b>{projectName}</b>
+          </div>
+          <div className="top-actions">
+            <span className={`environment ${identity.demo ? "demo" : "live"}`}>
+              {identity.demo ? "Demo" : "Live"}
+            </span>
+          </div>
+        </header>
+
+        {view === "home" && (
+          <HomeView
+            identity={identity}
+            context={context}
+            connections={connections}
+            navigate={navigate}
+            setRequest={setRequest}
+          />
+        )}
+        {view === "projects" && <ProjectsView context={context} />}
+        {view === "overview" && <OverviewView context={context} navigate={navigate} />}
+        {view === "website" && <WebsiteView context={context} navigate={navigate} />}
+        {view === "customers" && (
+          <EmptyDataView
+            eyebrow={projectName}
+            title="Customers"
+            copy="Customer records will appear after the project database is connected."
+            icon={Users}
+            navigate={navigate}
+          />
+        )}
+        {view === "bookings" && (
+          <EmptyDataView
+            eyebrow={projectName}
+            title="Bookings"
+            copy="Booking requests will appear after the booking database is connected."
+            icon={CalendarDays}
+            navigate={navigate}
+          />
+        )}
+        {view === "media" && (
+          <EmptyDataView
+            eyebrow={projectName}
+            title="Media"
+            copy="Project images will appear after storage is connected."
+            icon={ImageIcon}
+            navigate={navigate}
+          />
+        )}
+        {view === "ask" && (
+          <AskView
+            request={request}
+            setRequest={setRequest}
+            submit={askSeed}
+            planning={planning}
+            plan={plan}
+            enabled={openAiConnected}
+            navigate={navigate}
+          />
+        )}
+        {view === "settings" && (
+          <SettingsView connections={connections} open={setConnectionModal} />
+        )}
+      </main>
+
+      {connectionModal && (
+        <ConnectionModal
+          connection={connectionModal}
+          apiKey={apiKey}
+          setApiKey={setApiKey}
+          close={() => setConnectionModal(null)}
+          connect={connect}
+        />
+      )}
+      {notice && (
+        <button className="notice" onClick={() => setNotice(null)}>
+          <Check size={16} />
+          {notice}
+          <X size={14} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function PageTitle({
+  eyebrow,
+  title,
+  copy,
+  action,
+}: {
+  eyebrow?: string;
+  title: string;
+  copy: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="page-title">
+      <div>
+        {eyebrow && <span className="page-eyebrow">{eyebrow}</span>}
+        <h1>{title}</h1>
+        <p>{copy}</p>
+      </div>
+      {action}
+    </div>
+  );
+}
+
+function HomeView({
+  identity,
+  context,
+  connections,
+  navigate,
+  setRequest,
+}: {
+  identity: Identity;
+  context: DashboardContext;
+  connections: Connection[];
+  navigate: (view: View) => void;
+  setRequest: (value: string) => void;
+}) {
+  const connectedCount = connections.filter(
+    (connection) => connection.status === "Connected",
+  ).length;
+  const quick = (value: string) => {
+    setRequest(value);
+    navigate("ask");
+  };
+
+  return (
+    <>
+      <PageTitle
+        title={`Welcome, ${identity.name.split(" ")[0]}.`}
+        copy={
+          context.projectStatus === "live"
+            ? "Your project is live. Seed is ready for the next approved change."
+            : "Finish connecting your services, then ask Seed to prepare the first build."
+        }
+        action={
+          <button className="primary-action" onClick={() => navigate("ask")}>
+            <Sparkles size={16} /> Ask Seed
+          </button>
+        }
+      />
+      <section className="stats-grid">
+        <Metric
+          icon={Globe2}
+          label="Website"
+          value={statusLabel(context.projectStatus)}
+          detail={context.websiteUrl ?? "Not published yet"}
+          good={context.projectStatus === "live"}
+        />
+        <Metric
+          icon={CalendarDays}
+          label="Bookings"
+          value={String(context.counts.bookings)}
+          detail="No imported booking data"
+        />
+        <Metric
+          icon={ContactRound}
+          label="Customers"
+          value={String(context.counts.customers)}
+          detail="No imported customer data"
+        />
+        <Metric
+          icon={Activity}
+          label="Connections"
+          value={`${connectedCount}/4`}
+          detail={connectedCount === 4 ? "All services connected" : "Setup incomplete"}
+          good={connectedCount === 4}
+        />
+      </section>
+      <section className="home-grid">
+        <article className="dark-panel">
+          <span className="sparkle-orb">
+            <Sparkles />
+          </span>
+          <h2>What would you like to build?</h2>
+          <p>Describe it in simple language. Seed shows a safe plan before acting.</p>
+          <div className="quick-prompts">
+            <button onClick={() => quick("Build the first version of my website") }>
+              Build the first version <ArrowRight size={15} />
+            </button>
+            <button onClick={() => quick("Add a contact form") }>
+              Add a contact form <ArrowRight size={15} />
+            </button>
+            <button onClick={() => quick("Add booking requests") }>
+              Add booking requests <ArrowRight size={15} />
+            </button>
+          </div>
+        </article>
+        <article className="panel activity-panel">
+          <div className="panel-heading">
+            <h3>Recent activity</h3>
+          </div>
+          <Timeline runs={context.recentRuns} />
+        </article>
+      </section>
+      <section className="panel lower-panel">
+        <div className="panel-heading">
+          <div>
+            <h3>Your setup</h3>
+            <p>Connect each account once. Seed stores access securely.</p>
+          </div>
+          <button className="secondary-button" onClick={() => navigate("settings")}>
+            Manage connections
+          </button>
+        </div>
+        <div className="setup-row">
+          {connections.map((connection) => (
+            <Setup
+              key={connection.id}
+              icon={connection.icon}
+              label={connection.label}
+              status={connection.status}
+            />
+          ))}
+        </div>
+      </section>
+    </>
+  );
+}
+
+function Metric({
+  icon: Icon,
+  label,
+  value,
+  detail,
+  good,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  detail: string;
+  good?: boolean;
+}) {
+  return (
+    <article className="metric panel">
+      <div className="metric-icon">
+        <Icon size={18} />
+      </div>
+      <span>{label}</span>
+      <strong className={good ? "good" : ""}>
+        {good && <i />}
+        {value}
+      </strong>
+      <small>{detail}</small>
+    </article>
+  );
+}
+
+function Timeline({ runs }: { runs: DashboardRun[] }) {
+  if (!runs.length) {
+    return (
+      <div className="inline-empty">
+        <Activity size={22} />
+        <p>No Seed runs yet.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="timeline">
+      {runs.map((run) => (
+        <div key={run.id}>
+          <i className={run.status === "completed" ? "done" : ""}>
+            {run.status === "completed" ? <Check size={12} /> : <Activity size={12} />}
+          </i>
+          <span>
+            <b>{run.request}</b>
+            <small>
+              {statusLabel(run.status as ProjectStatus)} · {formatTimestamp(run.createdAt)}
+            </small>
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Setup({
+  icon: Icon,
+  label,
+  status,
+}: {
+  icon: LucideIcon;
+  label: string;
+  status: string;
+}) {
+  return (
+    <div>
+      <span>
+        <Icon size={17} />
+      </span>
+      <p>
+        <b>{label}</b>
+        <small>{status}</small>
+      </p>
+    </div>
+  );
+}
+
+function ProjectsView({ context }: { context: DashboardContext }) {
+  return (
+    <>
+      <PageTitle
+        eyebrow="Workspace"
+        title="Projects"
+        copy="Every website stays in the accounts you own."
+        action={
+          <Link className="primary-action" href="/onboarding">
+            <Plus size={16} /> New project
+          </Link>
+        }
+      />
+      {context.projects.length ? (
+        <section className="projects-grid">
+          {context.projects.map((project) => (
+            <ProjectCard project={project} key={project.id} />
+          ))}
+          <Link className="new-project-card" href="/onboarding">
+            <Plus />
+            <b>Create another project</b>
+            <span>Business, lead or booking website</span>
+          </Link>
+        </section>
+      ) : (
+        <EmptyState
+          icon={FolderKanban}
+          title="No projects yet"
+          copy="Create your first project to start connecting code, database and hosting."
+          action={
+            <Link className="primary-action" href="/onboarding">
+              Create a project
+            </Link>
+          }
+        />
+      )}
+    </>
+  );
+}
+
+function ProjectCard({ project }: { project: DashboardProject }) {
+  return (
+    <Link className="project-card" href={`/dashboard?project=${project.id}`}>
+      <div className="project-thumb">
+        <span>{project.name}</span>
+      </div>
+      <div className="project-card-body">
+        <div>
+          <h3>{project.name}</h3>
+          <span className={`status-pill ${statusClass(project.status)}`}>
+            {statusLabel(project.status)}
+          </span>
+        </div>
+        <p>
+          {projectTypeLabel(project.projectType)} · Updated {formatTimestamp(project.updatedAt)}
+        </p>
+        <footer>
+          <span>{project.websiteUrl ?? "Not deployed"}</span>
+          <ArrowRight size={16} />
+        </footer>
+      </div>
+    </Link>
+  );
+}
+
+function OverviewView({
+  context,
+  navigate,
+}: {
+  context: DashboardContext;
+  navigate: (view: View) => void;
+}) {
+  const connected = Object.values(context.connections).filter(
+    (status) => status === "Connected",
+  ).length;
+  const latestRun = context.recentRuns[0];
+
+  return (
+    <>
+      <PageTitle
+        eyebrow={context.projectName}
+        title="Project overview"
+        copy="Live project state from your connected services."
+        action={
+          <button className="primary-action" onClick={() => navigate("ask")}>
+            <Sparkles size={16} /> Make a change
+          </button>
+        }
+      />
+      <section className="overview-detail">
+        <article className="panel project-state-card">
+          <span className={`status-pill ${statusClass(context.projectStatus)}`}>
+            {statusLabel(context.projectStatus)}
+          </span>
+          <h2>{context.projectName}</h2>
+          <p>{projectTypeLabel(context.projectType)}</p>
+          {context.websiteUrl ? (
+            <a
+              className="primary-action"
+              href={context.websiteUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open live website <ExternalLink size={14} />
+            </a>
+          ) : (
+            <button className="secondary-button" onClick={() => navigate("settings")}>
+              Connect hosting
+            </button>
+          )}
+        </article>
+        <article className="panel readiness-card">
+          <ShieldCheck size={30} />
+          <h3>{connected === 4 ? "Ready to build" : "Setup required"}</h3>
+          <p>
+            {connected === 4
+              ? "All required services are connected."
+              : `${connected} of 4 required services are connected.`}
+          </p>
+          <button className="secondary-button" onClick={() => navigate("settings")}>
+            Review connections
+          </button>
+        </article>
+      </section>
+      <section className="stats-grid compact">
+        <Metric
+          icon={CalendarDays}
+          label="Bookings"
+          value={String(context.counts.bookings)}
+          detail="No imported booking data"
+        />
+        <Metric
+          icon={Users}
+          label="Customers"
+          value={String(context.counts.customers)}
+          detail="No imported customer data"
+        />
+        <Metric
+          icon={Activity}
+          label="Last Seed run"
+          value={latestRun ? statusLabel(latestRun.status as ProjectStatus) : "None"}
+          detail={latestRun ? formatTimestamp(latestRun.createdAt) : "No runs yet"}
+          good={latestRun?.status === "completed"}
+        />
+        <Metric
+          icon={Rocket}
+          label="Deployment"
+          value={context.websiteUrl ? "Available" : "None"}
+          detail={context.websiteUrl ?? "Not deployed yet"}
+          good={Boolean(context.websiteUrl)}
+        />
+      </section>
+    </>
+  );
+}
+
+function WebsiteView({
+  context,
+  navigate,
+}: {
+  context: DashboardContext;
+  navigate: (view: View) => void;
+}) {
+  return (
+    <>
+      <PageTitle
+        eyebrow={context.projectName}
+        title="Website"
+        copy="Publishing information from the connected Vercel project."
+        action={
+          context.websiteUrl ? (
+            <a
+              className="primary-action"
+              href={context.websiteUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <ExternalLink size={16} /> Open live website
+            </a>
+          ) : undefined
+        }
+      />
+      {context.websiteUrl ? (
+        <article className="panel deployment-card">
+          <span className="status-pill live">Live</span>
+          <Globe2 size={34} />
+          <h2>{context.projectName}</h2>
+          <a href={context.websiteUrl} target="_blank" rel="noreferrer">
+            {context.websiteUrl}
+          </a>
+          <p>The deployment URL was read from this project&apos;s connected resources.</p>
+        </article>
+      ) : (
+        <EmptyState
+          icon={Cloud}
+          title="No website deployment yet"
+          copy="Connect Vercel and approve a Seed build before a website appears here."
+          action={
+            <button className="primary-action" onClick={() => navigate("settings")}>
+              Connect Vercel
+            </button>
+          }
+        />
+      )}
+    </>
+  );
+}
+
+function EmptyDataView({
+  eyebrow,
+  title,
+  copy,
+  icon,
+  navigate,
+}: {
+  eyebrow: string;
+  title: string;
+  copy: string;
+  icon: LucideIcon;
+  navigate: (view: View) => void;
+}) {
+  return (
+    <>
+      <PageTitle eyebrow={eyebrow} title={title} copy={copy} />
+      <EmptyState
+        icon={icon}
+        title={`No ${title.toLowerCase()} yet`}
+        copy="Seed will show real records here after the required project service is connected."
+        action={
+          <button className="primary-action" onClick={() => navigate("settings")}>
+            Review connections
+          </button>
+        }
+      />
+    </>
+  );
+}
+
+function AskView({
+  request,
+  setRequest,
+  submit,
+  planning,
+  plan,
+  enabled,
+  navigate,
+}: {
+  request: string;
+  setRequest: (value: string) => void;
+  submit: (event: FormEvent) => void;
+  planning: boolean;
+  plan: PlanStep[] | null;
+  enabled: boolean;
+  navigate: (view: View) => void;
+}) {
+  return (
+    <>
+      <PageTitle
+        eyebrow="Seed AI"
+        title="Ask Seed"
+        copy="Describe what you need. Seed checks everything before changing your project."
+      />
+      {!enabled && (
+        <div className="connection-required" role="status">
+          <Bot size={18} />
+          <span>
+            <b>Connect your OpenAI API key to activate Seed AI.</b>
+            <small>Your key is encrypted and billed directly to your OpenAI account.</small>
+          </span>
+          <button className="secondary-button" onClick={() => navigate("settings")}>
+            Connect OpenAI
+          </button>
+        </div>
+      )}
+      <section className="ask-layout">
+        <article className="chat-panel panel">
+          <div className="chat-empty">
+            <div className="seed-mark">
+              <Sparkles />
+            </div>
+            <h2>What should we work on?</h2>
+            <p>Use plain language in Hindi or English.</p>
+            <div>
+              <button onClick={() => setRequest("Build the first version of my website") }>
+                Build my website
+              </button>
+              <button onClick={() => setRequest("Add a contact form") }>
+                Add a contact form
+              </button>
+              <button onClick={() => setRequest("Add booking requests") }>
+                Add bookings
+              </button>
+            </div>
+          </div>
+          <form className="chat-input" onSubmit={submit}>
+            <textarea
+              value={request}
+              onChange={(event) => setRequest(event.target.value)}
+              placeholder="Ask Seed anything about this project…"
+              rows={3}
+              disabled={!enabled}
+            />
+            <footer>
+              <span>
+                <ShieldCheck size={14} /> Guarded by Seed
+              </span>
+              <button
+                aria-label="Create build plan"
+                disabled={!enabled || planning || !request.trim()}
+              >
+                {planning ? <LoaderCircle className="spin" size={17} /> : <ArrowRight size={17} />}
+              </button>
+            </footer>
+          </form>
+        </article>
+        <aside className="panel run-panel">
+          <h3>Build plan</h3>
+          {!plan && !planning && (
+            <div className="empty-plan">
+              <BookOpen />
+              <p>Your project-specific plan will appear here before Seed makes changes.</p>
+            </div>
+          )}
+          {planning && (
+            <div className="planning">
+              <LoaderCircle className="spin" />
+              <b>Reading your request…</b>
+              <span>Seed is choosing skills and checking policies.</span>
+            </div>
+          )}
+          {plan && (
+            <>
+              <p className="plan-intro">
+                Seed will use the latest connected project state before changing anything.
+              </p>
+              <div className="run-steps">
+                {plan.map((step, index) => (
+                  <div key={`${step.title}-${index}`}>
+                    <i>{index + 1}</i>
+                    <span>
+                      <b>{step.title}</b>
+                      <small>{step.kind}</small>
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <button className="primary-action full" disabled>
+                <Rocket size={16} /> Preview execution requires provider connections
+              </button>
+              <small className="approval-note">
+                <ShieldCheck size={13} /> Production publishing remains blocked until every
+                required check passes.
+              </small>
+            </>
+          )}
+        </aside>
+      </section>
+    </>
+  );
+}
+
+function SettingsView({
+  connections,
+  open,
+}: {
+  connections: Connection[];
+  open: (connection: Connection) => void;
+}) {
+  return (
+    <>
+      <PageTitle
+        eyebrow="Workspace settings"
+        title="Connections"
+        copy="Seed works in services you own. You can disconnect them anytime."
+      />
+      <article className="panel connection-page">
+        <div className="connection-intro">
+          <LockKeyhole />
+          <div>
+            <h3>Your accounts stay yours</h3>
+            <p>
+              Seed receives only the access needed to manage this project. Passwords are
+              never requested or stored.
+            </p>
+          </div>
+        </div>
+        {connections.map((connection) => (
+          <div className="connection-row" key={connection.id}>
+            <span className="provider-logo">
+              <connection.icon />
+            </span>
+            <div>
+              <b>{connection.label}</b>
+              <small>{connection.detail}</small>
+            </div>
+            <span
+              className={`status-pill ${
+                connection.status === "Connected"
+                  ? "live"
+                  : connection.status === "Connecting"
+                    ? "warning"
+                    : "idle"
+              }`}
+            >
+              {connection.status}
+            </span>
+            <button className="secondary-button" onClick={() => open(connection)}>
+              {connection.status === "Not connected" ? "Connect" : "Reconnect"}
+            </button>
+          </div>
+        ))}
+      </article>
+    </>
+  );
+}
+
+function ConnectionModal({
+  connection,
+  apiKey,
+  setApiKey,
+  close,
+  connect,
+}: {
+  connection: Connection;
+  apiKey: string;
+  setApiKey: (value: string) => void;
+  close: () => void;
+  connect: (connection: Connection, event?: FormEvent) => void;
+}) {
+  const isOpenAi = connection.id === "openai";
+  return (
+    <div className="modal-backdrop" onMouseDown={close}>
+      <form
+        className="modal"
+        onSubmit={(event) => connect(connection, event)}
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <button className="modal-close" type="button" onClick={close} aria-label="Close">
+          <X />
+        </button>
+        <span className="provider-logo large">
+          <connection.icon />
+        </span>
+        <p className="eyebrow">{connection.label}</p>
+        <h2>{isOpenAi ? "Activate Seed AI" : `Connect ${connection.label.toLowerCase()}`}</h2>
+        <p>
+          {isOpenAi
+            ? "Use your own OpenAI API key. Seed validates it, encrypts it server-side and never returns it to the browser. OpenAI bills your account directly."
+            : "You’ll be sent to the provider to approve access. Seed never asks for your password."}
+        </p>
+        {isOpenAi && (
+          <label className="field-label">
+            OpenAI API key
+            <input
+              type="password"
+              value={apiKey}
+              onChange={(event) => setApiKey(event.target.value)}
+              placeholder="sk-…"
+              autoComplete="off"
+              required
+            />
+          </label>
+        )}
+        <button className="primary-action full" type="submit">
+          {isOpenAi ? "Validate and save securely" : "Continue to authorize"}
+          <ArrowRight size={16} />
+        </button>
+        <small className="modal-safe">
+          <ShieldCheck size={13} /> Minimum access · Disconnect anytime · Audited actions
+        </small>
+      </form>
+    </div>
+  );
+}
+
+function EmptyState({
+  icon: Icon,
+  title,
+  copy,
+  action,
+}: {
+  icon: LucideIcon;
+  title: string;
+  copy: string;
+  action?: ReactNode;
+}) {
+  return (
+    <article className="panel empty-state">
+      <span>
+        <Icon />
+      </span>
+      <h2>{title}</h2>
+      <p>{copy}</p>
+      {action}
+    </article>
+  );
+}
