@@ -14,6 +14,16 @@ const nextConfig: NextConfig = {
       { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
     ] }];
   },
+  async redirects() {
+    return [
+      { source: "/docs", destination: "/doc", permanent: true },
+      { source: "/documentation", destination: "/doc", permanent: true },
+      { source: "/eula", destination: "/EULA", permanent: true },
+      { source: "/privacy", destination: "/Privacy", permanent: true },
+      { source: "/support", destination: "/Support", permanent: true },
+      { source: "/help", destination: "/Support", permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;
