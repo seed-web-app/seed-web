@@ -1,8 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { verifyStoredConnection } from "@/lib/connections/verification";
 import { encryptCredential } from "@/lib/security/crypto";
 
 describe("verifyStoredConnection", () => {
+  afterEach(() => vi.restoreAllMocks());
   it("fails gracefully on invalid ciphertext", async () => {
     const result = await verifyStoredConnection("openai", "invalid:cipher:data");
     expect(result.valid).toBe(false);
@@ -34,5 +35,58 @@ describe("verifyStoredConnection", () => {
     const result = await verifyStoredConnection("supabase", encrypted);
     expect(result.valid).toBe(false);
     expect(result.error).toBeDefined();
+  });
+
+  it("requires Vercel project environment write approval", async () => {
+    process.env.SEED_CREDENTIAL_ENCRYPTION_KEY =
+      process.env.SEED_CREDENTIAL_ENCRYPTION_KEY || "f/bXWWy7oqul0Xg/pOKx1Tz3fUdDO738s5XOmcoOkSs=";
+    const encrypted = encryptCredential(
+      JSON.stringify({
+        access_token: "vercel-test-token",
+        team_id: "team_test",
+        installation_id: "icfg_test",
+      }),
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({
+          id: "icfg_test",
+          projectSelection: "all",
+          scopes: ["read-write:project", "read-write:deployment"],
+        }),
+      ),
+    );
+
+    const result = await verifyStoredConnection("vercel", encrypted);
+    expect(result.valid).toBe(false);
+    expect(result.error).toContain("Project Environment Variables: Read/Write");
+  });
+
+  it("accepts Vercel after the environment scope is approved", async () => {
+    process.env.SEED_CREDENTIAL_ENCRYPTION_KEY =
+      process.env.SEED_CREDENTIAL_ENCRYPTION_KEY || "f/bXWWy7oqul0Xg/pOKx1Tz3fUdDO738s5XOmcoOkSs=";
+    const encrypted = encryptCredential(
+      JSON.stringify({
+        access_token: "vercel-test-token",
+        team_id: "team_test",
+        installation_id: "icfg_test",
+      }),
+    );
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({
+          id: "icfg_test",
+          projectSelection: "all",
+          scopes: ["read-write:project", "read-write:project-env-vars"],
+        }),
+      )
+      .mockResolvedValueOnce(Response.json({ id: "team_test", name: "Test team" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await verifyStoredConnection("vercel", encrypted);
+    expect(result.valid).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });

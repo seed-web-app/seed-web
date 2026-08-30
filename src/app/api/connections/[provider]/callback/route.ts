@@ -5,6 +5,7 @@ import { z } from "zod";
 import { storeProviderConnection } from "@/lib/connections/store";
 import { seedLog } from "@/lib/logger";
 import { rootUrl, dashboardUrl, sharedAuthCookieOptions } from "@/lib/tenancy";
+import { hasVercelEnvironmentWriteScope } from "@/lib/connections/verification";
 
 const providerSchema=z.enum(["github","supabase","vercel"]);
 const oauthCookieSchema = z.object({
@@ -192,10 +193,37 @@ export async function GET(request: Request, { params }: { params: Promise<{ prov
         code,
         redirect_uri: rootUrl("/api/connections/vercel/callback"),
       });
-      await storeProviderConnection(oauth.workspaceId, "vercel", token, [
-        "project:read-write",
-        "deployment:read-write",
-      ]);
+
+      if (!token.installation_id) {
+        throw new Error("Vercel did not return an integration configuration ID.");
+      }
+      const configurationUrl = new URL(
+        `https://api.vercel.com/v1/integrations/configuration/${encodeURIComponent(token.installation_id)}`,
+      );
+      if (token.team_id) configurationUrl.searchParams.set("teamId", token.team_id);
+      const configurationResponse = await fetch(configurationUrl, {
+        headers: {
+          Authorization: `Bearer ${token.access_token}`,
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+      });
+      if (!configurationResponse.ok) {
+        throw new Error("Vercel installation permissions could not be verified.");
+      }
+      const configuration = (await configurationResponse.json()) as { scopes?: string[] };
+      if (!hasVercelEnvironmentWriteScope(configuration.scopes)) {
+        throw new Error(
+          "Approve Project Environment Variables: Read/Write in Vercel, then reconnect.",
+        );
+      }
+
+      await storeProviderConnection(
+        oauth.workspaceId,
+        "vercel",
+        token,
+        configuration.scopes ?? [],
+      );
     }
 
     clearOAuthCookie(cookieStore, provider);

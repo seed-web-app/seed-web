@@ -13,6 +13,17 @@ export interface VerificationResult {
   metadata?: Record<string, unknown>;
 }
 
+const VERCEL_ENV_WRITE_SCOPES = new Set([
+  "read-write:project-env-vars",
+  "read-write:global-project-env-vars",
+]);
+
+export function hasVercelEnvironmentWriteScope(scopes: unknown): scopes is string[] {
+  return Array.isArray(scopes) && scopes.some(
+    (scope) => typeof scope === "string" && VERCEL_ENV_WRITE_SCOPES.has(scope),
+  );
+}
+
 export async function verifyStoredConnection(
   provider: ProviderName,
   encryptedData: string,
@@ -199,12 +210,54 @@ export async function verifyStoredConnection(
   if (provider === "vercel") {
     const accessToken = parsed.access_token as string | undefined;
     const teamId = parsed.team_id as string | undefined | null;
+    const installationId = parsed.installation_id as string | undefined;
 
     if (!accessToken) {
       return { valid: false, error: "No Vercel OAuth access token stored." };
     }
 
+    if (!installationId) {
+      return { valid: false, error: "No Vercel integration configuration ID stored." };
+    }
+
     try {
+      const configurationUrl = new URL(
+        `https://api.vercel.com/v1/integrations/configuration/${encodeURIComponent(installationId)}`,
+      );
+      if (teamId) configurationUrl.searchParams.set("teamId", teamId);
+
+      const configurationResponse = await fetch(configurationUrl, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+      });
+      if (!configurationResponse.ok) {
+        return {
+          valid: false,
+          error: `Vercel installation verification failed (${configurationResponse.status}). Reconnect Vercel.`,
+        };
+      }
+
+      const configuration = (await configurationResponse.json()) as {
+        id?: string;
+        scopes?: string[];
+        projectSelection?: string;
+      };
+      if (!hasVercelEnvironmentWriteScope(configuration.scopes)) {
+        return {
+          valid: false,
+          error:
+            "Vercel permission upgrade is not approved. Reconnect Vercel and approve Project Environment Variables: Read/Write.",
+          metadata: {
+            configurationId: configuration.id ?? installationId,
+            projectSelection: configuration.projectSelection ?? null,
+            requiredScope: "read-write:project-env-vars",
+          },
+        };
+      }
+
       const url = teamId
         ? `https://api.vercel.com/v2/teams/${teamId}`
         : "https://api.vercel.com/v2/user";
@@ -228,6 +281,11 @@ export async function verifyStoredConnection(
       return {
         valid: true,
         accountLogin: (info.user as { username?: string })?.username || (info.name as string),
+        metadata: {
+          configurationId: configuration.id ?? installationId,
+          projectSelection: configuration.projectSelection ?? null,
+          scopes: configuration.scopes ?? [],
+        },
       };
     } catch (err) {
       return {
