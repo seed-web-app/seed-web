@@ -19,7 +19,7 @@ export default function PrivacyPage() {
         <p>We collect only the minimum information required to manage projects you explicitly authorize:</p>
         <ul>
           <li><strong>Account Information:</strong> Your name, email address, and profile picture provided through Google Authentication.</li>
-          <li><strong>Workspace & Project Metadata:</strong> Workspace name, project names, and feature configuration settings.</li>
+          <li><strong>Workspace &amp; Project Metadata:</strong> Workspace name, project names, and feature configuration settings.</li>
           <li><strong>Encrypted Authorization Credentials:</strong> OAuth tokens and installation IDs for GitHub, Supabase, Vercel, and OpenAI. All credentials are encrypted at rest using AES-256-GCM and are never sent to the browser or logged.</li>
           <li><strong>Audit Trail:</strong> Timestamps and actions performed by Seed on your behalf to maintain complete operational transparency.</li>
         </ul>
@@ -44,7 +44,7 @@ export default function PrivacyPage() {
           Sensitive credentials (such as GitHub App installation identifiers, Vercel tokens, and OpenAI API keys) are stored encrypted using industry-standard AES-256-GCM cryptography. Encryption keys are managed independently in server-side environments.
         </p>
 
-        <h2>5. Your Rights & Data Deletion</h2>
+        <h2>5. Your Rights &amp; Data Deletion</h2>
         <p>
           You have full control over your data. You can disconnect your third-party accounts at any time from your Seed project settings. Because your code, database, and deployments reside in accounts you own, disconnecting Seed leaves your live website and customer data completely intact and under your direct control.
         </p>

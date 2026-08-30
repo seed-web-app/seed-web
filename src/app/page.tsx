@@ -19,9 +19,9 @@ export default function Home() {
         <div>© {new Date().getFullYear()} Seed. All infrastructure is user-owned.</div>
         <div style={{ display: "flex", gap: "1.5rem" }}>
           <Link href="/doc" className="text-link">Documentation</Link>
-          <Link href="/EULA" className="text-link">EULA</Link>
-          <Link href="/Privacy" className="text-link">Privacy Policy</Link>
-          <Link href="/Support" className="text-link">Support</Link>
+          <Link href="/eula" className="text-link">EULA</Link>
+          <Link href="/privacy" className="text-link">Privacy Policy</Link>
+          <Link href="/support" className="text-link">Support</Link>
         </div>
       </footer>
     </main>

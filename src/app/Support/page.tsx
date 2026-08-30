@@ -9,7 +9,7 @@ export default function SupportPage() {
         seed<span>.</span>
       </Link>
       <article>
-        <p className="eyebrow">Help & Support</p>
+        <p className="eyebrow">Help &amp; Support</p>
         <h1>Seed Support Center</h1>
         <p>
           Need help setting up your integrations, planning a new website, or managing your custom domain? Our team and documentation are here to assist you.
@@ -48,8 +48,8 @@ export default function SupportPage() {
         <ul>
           <li><strong>Email:</strong> <a className="text-link" href="mailto:support@bestmodel.fun">support@bestmodel.fun</a></li>
           <li><strong>Documentation:</strong> <Link className="text-link" href="/doc">Integration Documentation</Link></li>
-          <li><strong>Terms &amp; EULA:</strong> <Link className="text-link" href="/EULA">End User License Agreement</Link></li>
-          <li><strong>Privacy Policy:</strong> <Link className="text-link" href="/Privacy">Privacy Policy</Link></li>
+          <li><strong>Terms &amp; EULA:</strong> <Link className="text-link" href="/eula">End User License Agreement</Link></li>
+          <li><strong>Privacy Policy:</strong> <Link className="text-link" href="/privacy">Privacy Policy</Link></li>
         </ul>
 
         <h2>System Status</h2>

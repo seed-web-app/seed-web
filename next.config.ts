@@ -18,10 +18,10 @@ const nextConfig: NextConfig = {
     return [
       { source: "/docs", destination: "/doc", permanent: true },
       { source: "/documentation", destination: "/doc", permanent: true },
-      { source: "/eula", destination: "/EULA", permanent: true },
-      { source: "/privacy", destination: "/Privacy", permanent: true },
-      { source: "/support", destination: "/Support", permanent: true },
-      { source: "/help", destination: "/Support", permanent: true },
+      { source: "/EULA", destination: "/eula", permanent: true },
+      { source: "/Privacy", destination: "/privacy", permanent: true },
+      { source: "/Support", destination: "/support", permanent: true },
+      { source: "/help", destination: "/support", permanent: true },
     ];
   },
 };
