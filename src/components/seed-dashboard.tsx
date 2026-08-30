@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { type FormEvent, type ReactNode, useState } from "react";
+import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import {
   Activity,
   ArrowRight,
@@ -70,6 +70,22 @@ type Connection = {
 };
 
 type PlanStep = { title: string; kind: string };
+
+type RunStep = {
+  stepType: string;
+  status: string;
+  outputSummary: string | null;
+  errorMessage: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+};
+
+type RunStatus = {
+  run: { id: string; status: string; createdAt: string; completedAt: string | null };
+  steps: RunStep[];
+  previewUrl: string | null;
+  productionUrl: string | null;
+};
 
 const mainNav: [View, string, LucideIcon][] = [
   ["home", "Home", Home],
@@ -168,6 +184,8 @@ export function SeedDashboard({
   const [request, setRequest] = useState("");
   const [plan, setPlan] = useState<PlanStep[] | null>(null);
   const [planning, setPlanning] = useState(false);
+  const [pendingRunId, setPendingRunId] = useState<string | null>(null);
+  const [runStatus, setRunStatus] = useState<RunStatus | null>(null);
 
   const projectName = context.projectName || "No project selected";
   const openAiConnected =
@@ -239,6 +257,8 @@ export function SeedDashboard({
     if (!request.trim() || !openAiConnected) return;
     setPlanning(true);
     setPlan(null);
+    setPendingRunId(null);
+    setRunStatus(null);
 
     try {
       const response = await fetch("/api/seed/plan", {
@@ -248,6 +268,7 @@ export function SeedDashboard({
       });
       const data = (await response.json()) as {
         message?: string;
+        runId?: string;
         plan?: { steps: PlanStep[] };
       };
 
@@ -257,6 +278,7 @@ export function SeedDashboard({
       }
 
       setPlan(data.plan.steps);
+      if (data.runId) setPendingRunId(data.runId);
       setNotice(data.message ?? "Your safe build plan is ready.");
     } catch {
       setNotice("Seed AI could not be reached. Please try again.");
@@ -399,6 +421,11 @@ export function SeedDashboard({
             plan={plan}
             enabled={openAiConnected}
             navigate={navigate}
+            pendingRunId={pendingRunId}
+            projectId={context.projectId}
+            workspaceId={context.workspaceId}
+            runStatus={runStatus}
+            setRunStatus={setRunStatus}
           />
         )}
         {view === "settings" && (
@@ -889,6 +916,10 @@ function AskView({
   plan,
   enabled,
   navigate,
+  pendingRunId,
+  projectId,
+  runStatus,
+  setRunStatus,
 }: {
   request: string;
   setRequest: (value: string) => void;
@@ -897,7 +928,139 @@ function AskView({
   plan: PlanStep[] | null;
   enabled: boolean;
   navigate: (view: View) => void;
+  pendingRunId: string | null;
+  projectId: string;
+  workspaceId: string;
+  runStatus: RunStatus | null;
+  setRunStatus: (status: RunStatus | null) => void;
 }) {
+  const [approving, setApproving] = useState(false);
+  const [approveError, setApproveError] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const isRunning =
+    runStatus?.run.status === "running";
+  const isWaitingForUser =
+    runStatus?.run.status === "waiting_for_user";
+  const isFailed = runStatus?.run.status === "failed";
+  const previewReady = isWaitingForUser && Boolean(runStatus?.previewUrl);
+
+  const pollStatus = useCallback(async () => {
+    if (!pendingRunId || !projectId) return;
+    try {
+      const res = await fetch(
+        `/api/seed/run-status?runId=${encodeURIComponent(pendingRunId)}&projectId=${encodeURIComponent(projectId)}`,
+      );
+      if (!res.ok) return;
+      const data = (await res.json()) as RunStatus;
+      setRunStatus(data);
+      // Stop polling once finished
+      if (
+        data.run.status === "waiting_for_user" ||
+        data.run.status === "completed" ||
+        data.run.status === "failed" ||
+        data.run.status === "rolled_back"
+      ) {
+        if (pollRef.current) clearInterval(pollRef.current);
+      }
+    } catch {
+      // Silently retry on network error
+    }
+  }, [pendingRunId, projectId, setRunStatus]);
+
+  // Start/stop polling when runId changes or execution begins
+  useEffect(() => {
+    if (!pendingRunId || !isRunning) return;
+    pollRef.current = setInterval(() => { void pollStatus(); }, 3_000);
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [pendingRunId, isRunning, pollStatus]);
+
+  async function approve() {
+    if (!pendingRunId || !projectId || approving) return;
+    setApproving(true);
+    setApproveError(null);
+    try {
+      const res = await fetch("/api/seed/approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ runId: pendingRunId, projectId }),
+      });
+      const data = (await res.json()) as { message?: string; status?: string };
+      if (!res.ok) {
+        setApproveError(data.message ?? "Could not start the run.");
+        setApproving(false);
+        return;
+      }
+      // Trigger first poll immediately, then interval will take over
+      void pollStatus();
+      // Start polling
+      if (pollRef.current) clearInterval(pollRef.current);
+      pollRef.current = setInterval(() => { void pollStatus(); }, 3_000);
+    } catch {
+      setApproveError("Could not reach Seed. Please try again.");
+      setApproving(false);
+    }
+  }
+
+  async function publish() {
+    if (!pendingRunId || !projectId || publishing) return;
+    setPublishing(true);
+    try {
+      const res = await fetch("/api/seed/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ runId: pendingRunId, projectId }),
+      });
+      const data = (await res.json()) as { message?: string };
+      if (!res.ok) {
+        setApproveError(data.message ?? "Could not publish.");
+      } else {
+        // Resume polling for completed status
+        if (pollRef.current) clearInterval(pollRef.current);
+        pollRef.current = setInterval(() => { void pollStatus(); }, 3_000);
+      }
+    } catch {
+      setApproveError("Could not reach Seed. Please try again.");
+    } finally {
+      setPublishing(false);
+    }
+  }
+
+  function stepIcon(status: string) {
+    if (status === "completed") return <Check size={13} />;
+    if (status === "running") return <LoaderCircle className="spin" size={13} />;
+    if (status === "failed") return <X size={13} />;
+    return null;
+  }
+
+  function stepClass(status: string) {
+    if (status === "completed") return "step-done";
+    if (status === "running") return "step-running";
+    if (status === "failed") return "step-failed";
+    return "step-pending";
+  }
+
+  function stepLabel(stepType: string) {
+    const labels: Record<string, string> = {
+      inspect: "Inspect current project state",
+      generate_files: "Generate application files",
+      guard: "Seed Guard validation",
+      github_repo: "Create GitHub repository",
+      github_push: "Push application code",
+      supabase_project: "Create Supabase project",
+      supabase_migrate: "Apply database schema",
+      vercel_project: "Create Vercel project",
+      vercel_env: "Configure environment variables",
+      vercel_deploy: "Deploy preview",
+      verify_preview: "Verify preview website",
+      record_snapshot: "Record project snapshot",
+    };
+    return labels[stepType] ?? stepType.replace(/_/g, " ");
+  }
+
   return (
     <>
       <PageTitle
@@ -926,13 +1089,13 @@ function AskView({
             <h2>What should we work on?</h2>
             <p>Use plain language in Hindi or English.</p>
             <div>
-              <button onClick={() => setRequest("Build the first version of my website") }>
+              <button onClick={() => setRequest("Build the first version of my website")}>
                 Build my website
               </button>
-              <button onClick={() => setRequest("Add a contact form") }>
+              <button onClick={() => setRequest("Add a contact form")}>
                 Add a contact form
               </button>
-              <button onClick={() => setRequest("Add booking requests") }>
+              <button onClick={() => setRequest("Add booking requests")}>
                 Add bookings
               </button>
             </div>
@@ -960,7 +1123,7 @@ function AskView({
         </article>
         <aside className="panel run-panel">
           <h3>Build plan</h3>
-          {!plan && !planning && (
+          {!plan && !planning && !runStatus && (
             <div className="empty-plan">
               <BookOpen />
               <p>Your project-specific plan will appear here before Seed makes changes.</p>
@@ -973,7 +1136,85 @@ function AskView({
               <span>Seed is choosing skills and checking policies.</span>
             </div>
           )}
-          {plan && (
+
+          {/* ── Execution progress ─────────────────────────────────── */}
+          {runStatus && (
+            <>
+              <div className="run-progress">
+                {runStatus.steps.map((step) => (
+                  <div key={step.stepType} className={`run-step ${stepClass(step.status)}`}>
+                    <i>{stepIcon(step.status)}</i>
+                    <span>
+                      <b>{stepLabel(step.stepType)}</b>
+                      {step.errorMessage && (
+                        <small className="step-error">{step.errorMessage}</small>
+                      )}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Preview ready — show open + publish */}
+              {previewReady && runStatus.previewUrl && (
+                <div className="preview-actions">
+                  <p className="preview-ready-label">
+                    <Check size={15} /> Preview is ready
+                  </p>
+                  <a
+                    className="primary-action full"
+                    href={runStatus.previewUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <Globe2 size={16} /> Open Preview
+                  </a>
+                  <button
+                    className="secondary-button full"
+                    onClick={() => { void publish(); }}
+                    disabled={publishing}
+                  >
+                    {publishing ? (
+                      <LoaderCircle className="spin" size={16} />
+                    ) : (
+                      <Rocket size={16} />
+                    )}
+                    {publishing ? "Publishing…" : "Publish Website"}
+                  </button>
+                  <small className="approval-note">
+                    <ShieldCheck size={13} /> Production publishing requires your explicit
+                    approval.
+                  </small>
+                </div>
+              )}
+
+              {/* Production live */}
+              {runStatus.run.status === "completed" && runStatus.productionUrl && (
+                <div className="preview-actions">
+                  <p className="preview-ready-label">
+                    <Check size={15} /> Website is live
+                  </p>
+                  <a
+                    className="primary-action full"
+                    href={runStatus.productionUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <Globe2 size={16} /> Open Live Website
+                  </a>
+                </div>
+              )}
+
+              {/* Failed state */}
+              {isFailed && (
+                <p className="step-error" style={{ marginTop: "1rem" }}>
+                  Seed encountered an error. Check the step above for details.
+                </p>
+              )}
+            </>
+          )}
+
+          {/* ── Plan + Approve button ──────────────────────────────── */}
+          {plan && !runStatus && (
             <>
               <p className="plan-intro">
                 Seed will use the latest connected project state before changing anything.
@@ -989,9 +1230,25 @@ function AskView({
                   </div>
                 ))}
               </div>
-              <button className="primary-action full" disabled>
-                <Rocket size={16} /> Preview execution requires provider connections
-              </button>
+              {approveError && <p className="step-error">{approveError}</p>}
+              {pendingRunId ? (
+                <button
+                  className="primary-action full"
+                  onClick={() => { void approve(); }}
+                  disabled={approving}
+                >
+                  {approving ? (
+                    <LoaderCircle className="spin" size={16} />
+                  ) : (
+                    <Rocket size={16} />
+                  )}
+                  {approving ? "Starting…" : "Approve & Create Preview"}
+                </button>
+              ) : (
+                <button className="primary-action full" disabled>
+                  <Rocket size={16} /> Preview requires provider connections
+                </button>
+              )}
               <small className="approval-note">
                 <ShieldCheck size={13} /> Production publishing remains blocked until every
                 required check passes.
@@ -1003,6 +1260,7 @@ function AskView({
     </>
   );
 }
+
 
 function SettingsView({
   connections,
