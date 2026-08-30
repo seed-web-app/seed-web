@@ -23,11 +23,19 @@ export async function generateInstallationToken(
     JSON.stringify({ iat: now - 60, exp: now + 600, iss: appId }),
   ).toString("base64url");
 
-  // Normalize PEM — Vercel / env vars sometimes strip newlines
-  const pem = privateKeyPem
+  // Normalize PEM — Vercel / env vars sometimes strip or double-escape newlines
+  let pem = privateKeyPem
+    .replace(/\\r/g, "")
     .replace(/\\n/g, "\n")
-    .replace(/-----BEGIN RSA PRIVATE KEY-----/, "-----BEGIN RSA PRIVATE KEY-----\n")
-    .replace(/-----END RSA PRIVATE KEY-----/, "\n-----END RSA PRIVATE KEY-----");
+    .replace(/\r/g, "")
+    .trim();
+
+  if (!pem.includes("-----BEGIN RSA PRIVATE KEY-----")) {
+    pem = `-----BEGIN RSA PRIVATE KEY-----\n${pem}`;
+  }
+  if (!pem.includes("-----END RSA PRIVATE KEY-----")) {
+    pem = `${pem}\n-----END RSA PRIVATE KEY-----`;
+  }
 
   const sign = createSign("RSA-SHA256");
   sign.update(`${header}.${payload}`);
