@@ -154,32 +154,46 @@ export async function getDashboardContext(
   const { verifyStoredConnection } = await import("@/lib/connections/verification");
 
   for (const row of connectionRows ?? []) {
-    if (row.status === "connected" && row.encrypted_access_data) {
+    if (row.encrypted_access_data) {
       const verification = await verifyStoredConnection(
         row.provider as ProviderName,
         row.encrypted_access_data,
       );
       if (verification.valid) {
         connections[row.provider as ProviderName] = "Connected";
+
+        // Persist connected status if it was previously needs_attention or not_connected
+        const updates: Record<string, unknown> = {};
+        if (row.status !== "connected") {
+          updates.status = "connected";
+          updates.connected_at = new Date().toISOString();
+        }
+
         // If it was refreshed, update stored credential
         if (verification.metadata?.refreshed && verification.metadata.newTokens) {
           const { encryptCredential } = await import("@/lib/security/crypto");
+          updates.encrypted_access_data = encryptCredential(
+            JSON.stringify(verification.metadata.newTokens),
+          );
+        }
+
+        if (Object.keys(updates).length > 0) {
+          updates.updated_at = new Date().toISOString();
           await admin
             .from("provider_connections")
-            .update({
-              encrypted_access_data: encryptCredential(JSON.stringify(verification.metadata.newTokens)),
-              updated_at: new Date().toISOString(),
-            })
+            .update(updates)
             .eq("workspace_id", workspace.id)
             .eq("provider", row.provider);
         }
       } else {
         connections[row.provider as ProviderName] = "Needs attention";
-        await admin
-          .from("provider_connections")
-          .update({ status: "needs_attention", updated_at: new Date().toISOString() })
-          .eq("workspace_id", workspace.id)
-          .eq("provider", row.provider);
+        if (row.status !== "needs_attention") {
+          await admin
+            .from("provider_connections")
+            .update({ status: "needs_attention", updated_at: new Date().toISOString() })
+            .eq("workspace_id", workspace.id)
+            .eq("provider", row.provider);
+        }
       }
     } else {
       connections[row.provider as ProviderName] =

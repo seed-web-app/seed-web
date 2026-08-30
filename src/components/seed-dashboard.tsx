@@ -705,7 +705,7 @@ function Setup({
       </span>
       <p>
         <b>{label}</b>
-        <small>{status}</small>
+        <small>{status === "Connected" ? "Connected ✅" : status}</small>
       </p>
     </div>
   );
@@ -1345,10 +1345,12 @@ function SettingsView({
                   ? "live"
                   : connection.status === "Connecting"
                     ? "warning"
-                    : "idle"
+                    : connection.status === "Needs attention"
+                      ? "warning"
+                      : "idle"
               }`}
             >
-              {connection.status}
+              {connection.status === "Connected" ? "Connected ✅" : connection.status}
             </span>
             <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
               {connection.status === "Not connected" ? (
