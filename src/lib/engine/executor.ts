@@ -292,16 +292,81 @@ export async function executeSeedRun(ctx: ExecutorContext): Promise<void> {
       await audit(admin, ctx, "generate_files", { fileCount: generatedFiles.length });
     });
 
-    // ── 3. Seed Guard ──────────────────────────────────────────────────────
+    // ── 3. Seed Guard with Automatic Repair Loop ──────────────────────────
     await runStep(ctx.runId, "guard", statuses, async () => {
-      const guard = validateProposal({
+      let currentFiles = generatedFiles;
+      let guard = validateProposal({
         request: `Build booking website: ${ctx.projectName}`,
-        proposedFiles: generatedFiles,
+        proposedFiles: currentFiles,
       });
-      if (!guard.passed) {
-        throw new Error("Seed Guard blocked generated files. Manual review required.");
+
+      let repairAttempt = 0;
+      const MAX_REPAIRS = 3;
+
+      while (!guard.passed && repairAttempt < MAX_REPAIRS) {
+        repairAttempt++;
+        seedLog("warn", "seed_guard_repair_attempt", {
+          runId: ctx.runId,
+          attempt: repairAttempt,
+          violations: guard.violations,
+        });
+
+        // Set friendly progress message for the user in the UI
+        await setRunStep(
+          ctx.runId,
+          "guard",
+          "running",
+          undefined,
+          `Fixing a safety issue (attempt ${repairAttempt} of ${MAX_REPAIRS})…`,
+        );
+
+        // Attempt repair if OpenAI is connected
+        let openAiKey: string | undefined;
+        try {
+          const encKey = await getProviderCredentials(admin, ctx.workspaceId, "openai");
+          const creds = JSON.parse(decryptCredential(encKey)) as { apiKey?: string };
+          openAiKey = creds.apiKey;
+        } catch {
+          // No active OpenAI connection; fall back to built-in rule sanitizer
+        }
+
+        if (openAiKey) {
+          try {
+            const { OpenAISeedProvider } = await import("@/lib/ai/openai-provider");
+            const provider = new OpenAISeedProvider(openAiKey);
+            currentFiles = await provider.repair({
+              violations: guard.violations ?? [],
+              files: currentFiles,
+            });
+          } catch (repairErr) {
+            seedLog("error", "seed_guard_ai_repair_failed", {
+              runId: ctx.runId,
+              error: repairErr instanceof Error ? repairErr.message : String(repairErr),
+            });
+          }
+        }
+
+        // Re-validate repaired files
+        guard = validateProposal({
+          request: `Build booking website: ${ctx.projectName}`,
+          proposedFiles: currentFiles,
+        });
       }
-      await audit(admin, ctx, "seed_guard_passed", { stages: guard.stages.length });
+
+      if (!guard.passed) {
+        // Record technical audit record for developers
+        await audit(admin, ctx, "seed_guard_failed", {
+          violations: guard.violations,
+          attempts: repairAttempt,
+        });
+        throw new Error("Seed could not safely complete this build.");
+      }
+
+      generatedFiles = currentFiles;
+      await audit(admin, ctx, "seed_guard_passed", {
+        stages: guard.stages.length,
+        repairsNeeded: repairAttempt,
+      });
     });
 
     // ── 4. GitHub repo ─────────────────────────────────────────────────────

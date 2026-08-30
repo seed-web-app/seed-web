@@ -1187,9 +1187,17 @@ function AskView({
                     <i>{stepIcon(step.status)}</i>
                     <span>
                       <b>{stepLabel(step.stepType)}</b>
-                      {step.errorMessage && (
+                      {step.status === "running" && step.errorMessage ? (
+                        <small style={{ color: "#3b82f6", display: "block", marginTop: "2px" }}>
+                          {step.errorMessage}
+                        </small>
+                      ) : step.errorMessage ? (
                         <small className="step-error">{step.errorMessage}</small>
-                      )}
+                      ) : step.status === "running" && step.stepType === "guard" ? (
+                        <small style={{ color: "#3b82f6", display: "block", marginTop: "2px" }}>
+                          Checking generated website…
+                        </small>
+                      ) : null}
                     </span>
                   </div>
                 ))}
