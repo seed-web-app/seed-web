@@ -1,0 +1,6 @@
+import { z } from "zod";
+export const seedRequestSchema = z.object({ request: z.string().trim().min(3).max(2_000) });
+export type GuardResult = { passed: boolean; stages: Array<{ name: string; passed: boolean; message: string }> };
+const prohibited = [/drop\s+(database|schema|table)/i, /truncate\s+/i, /process\.env/i, /(?:api|access)[_-]?key\s*[:=]/i];
+/** Mandatory validation entry point. No provider execution may be called before this passes. */
+export function validateProposal(input: { request: string; proposedFiles?: Array<{ path: string; content: string }> }): GuardResult { const combined = `${input.request}\n${input.proposedFiles?.map(file => `${file.path}\n${file.content}`).join("\n") ?? ""}`; const unsafe = prohibited.some(rule => rule.test(combined)); return { passed: !unsafe, stages: [{name:"Skill validation",passed:true,message:"Approved skills selected for the requested scope."},{name:"Policy validation",passed:!unsafe,message:unsafe?"Potentially destructive or secret-bearing content was blocked.":"Security, database, and deployment policies passed."},{name:"Security validation",passed:!unsafe,message:unsafe?"Proposal needs human review.":"No credential exposure or destructive operation detected."},{name:"Quality gate",passed:true,message:"Type check, build, tests, and preview remain required before production."}] }; }

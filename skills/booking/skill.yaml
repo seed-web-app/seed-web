@@ -1,0 +1,6 @@
+name: booking
+version: 1.0.0
+requires: [database, admin-panel]
+security: { require_server_validation: true, require_rls: true }
+entities: [bookings, services, customers]
+tests: [create_booking, invalid_booking, prevent_unauthorized_access, prevent_double_booking]

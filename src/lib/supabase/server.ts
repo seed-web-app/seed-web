@@ -1,0 +1,30 @@
+import "server-only";
+import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
+import { cookies } from "next/headers";
+import { seedConfig } from "@/lib/config";
+
+export async function createSupabaseServerClient() {
+  if (!seedConfig.supabaseUrl || !seedConfig.supabaseKey) return null;
+  const cookieStore = await cookies();
+  return createServerClient(seedConfig.supabaseUrl, seedConfig.supabaseKey, {
+    cookies: {
+      getAll: () => cookieStore.getAll(),
+      setAll: (items) => { try { items.forEach(({ name, value, options }) => cookieStore.set(name, value, options)); } catch { /* Server Components cannot always write cookies. */ } },
+    },
+  });
+}
+
+export async function getSeedIdentity() {
+  const client = await createSupabaseServerClient();
+  if (!client) return { id: "demo-user", name: "Shikha", email: "demo@seed.local", avatarUrl: null, demo: true };
+  const { data: { user } } = await client.auth.getUser();
+  if (!user) return null;
+  return { id: user.id, name: user.user_metadata.full_name ?? user.email?.split("@")[0] ?? "Seed user", email: user.email ?? "", avatarUrl: user.user_metadata.avatar_url ?? null, demo: false };
+}
+
+export function createSupabaseAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL; const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !serviceRoleKey) return null;
+  return createClient(url, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
+}

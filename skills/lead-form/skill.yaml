@@ -1,0 +1,6 @@
+name: lead-form
+version: 1.0.0
+requires: [base-app]
+security: { require_server_validation: true }
+entities: [leads]
+tests: [valid_submission, invalid_submission]

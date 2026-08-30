@@ -1,0 +1,10 @@
+import "server-only";
+import { createSupabaseAdminClient } from "@/lib/supabase/server";
+import type { RunContext } from "@/lib/seed-run";
+
+export type QueuedRun={id:string;project_id:string;user_request:string;status:"pending"|"running"|"waiting_for_user"|"completed"|"failed"|"rolled_back"};
+function admin(){const client=createSupabaseAdminClient();if(!client)throw new Error("Seed's background job store is not configured.");return client;}
+export async function enqueueSeedRun(context:RunContext,userRequest:string,stepTypes:string[]){const client=admin();const{data:run,error}=await client.from("seed_runs").insert({id:context.runId,project_id:context.projectId,user_request:userRequest,status:"pending"}).select("id").single();if(error)throw new Error("Seed could not queue the run.");const{error:stepError}=await client.from("seed_run_steps").insert(stepTypes.map(step_type=>({seed_run_id:run.id,step_type,status:"pending"})));if(stepError)throw new Error("Seed could not create the run steps.");return run.id;}
+export async function claimNextSeedRun(){const{data,error}=await admin().rpc("claim_next_seed_run");if(error)throw new Error("Seed could not claim the next run.");return(data?.[0]??null)as QueuedRun|null;}
+export async function setRunStep(runId:string,stepType:string,status:QueuedRun["status"],summary?:string,errorMessage?:string){const values={status,output_summary:summary??null,error_message:errorMessage??null,...(status==="running"?{started_at:new Date().toISOString()}:{}),...(["completed","failed","rolled_back"].includes(status)?{completed_at:new Date().toISOString()}: {})};const{error}=await admin().from("seed_run_steps").update(values).eq("seed_run_id",runId).eq("step_type",stepType);if(error)throw new Error("Seed could not record the run step.");}
+export async function finishSeedRun(runId:string,status:"completed"|"failed"|"rolled_back"){const{error}=await admin().from("seed_runs").update({status,completed_at:new Date().toISOString()}).eq("id",runId);if(error)throw new Error("Seed could not finish the run record.");}

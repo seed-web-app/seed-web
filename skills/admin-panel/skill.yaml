@@ -1,0 +1,5 @@
+name: admin-panel
+version: 1.0.0
+requires: [auth]
+security: { require_server_authorization: true }
+tests: [unauthorized_access, update_booking]

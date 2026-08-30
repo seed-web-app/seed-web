@@ -1,0 +1,5 @@
+name: base-app
+version: 1.0.0
+description: Safe baseline for a simple customer-facing website.
+security: { require_server_validation: true, require_no_secret_exposure: true }
+tests: [typecheck, build, preview]
