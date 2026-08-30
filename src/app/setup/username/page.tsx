@@ -1,15 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { UsernameSetupForm } from "@/components/username-setup-form";
-import { seedConfig } from "@/lib/config";
 import { getSeedIdentity, getSeedProfile } from "@/lib/supabase/server";
 import { dashboardUrl, rootDomain, rootUrl } from "@/lib/tenancy";
 
 export const dynamic = "force-dynamic";
 
 export default async function UsernameSetupPage() {
-  if (seedConfig.demoMode) redirect("/onboarding?demo=1");
-
   const [identity, profile] = await Promise.all([
     getSeedIdentity(),
     getSeedProfile(),

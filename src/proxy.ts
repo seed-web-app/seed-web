@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { rootUrl, sharedAuthCookieOptions } from "@/lib/tenancy";
+import { rootUrl, sharedAuthCookieOptions, usernameFromHost } from "@/lib/tenancy";
 
 function redirectWithCookies(url: string, source: NextResponse) {
   const redirect = NextResponse.redirect(url);
@@ -9,8 +9,6 @@ function redirectWithCookies(url: string, source: NextResponse) {
 }
 
 export async function proxy(request: NextRequest) {
-  if (process.env.SEED_DEMO_MODE === "true") return NextResponse.next();
-
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   if (!url || !key) return NextResponse.next();
@@ -32,28 +30,42 @@ export async function proxy(request: NextRequest) {
       },
     },
   });
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  const host = request.headers.get("host");
+  const tenant = usernameFromHost(host);
+  const pathname = request.nextUrl.pathname;
+
+  // Rule 1: If accessing a tenant subdomain (e.g. username.bestmodel.fun)
+  if (tenant) {
+    if (!user) {
+      // Unauthenticated user trying to access any tenant subdomain must be redirected to main login
+      return redirectWithCookies(rootUrl("/login"), response);
+    }
+  }
+
+  // Rule 2: Protected routes on any domain
   const protectedRoute =
-    request.nextUrl.pathname.startsWith("/dashboard") ||
-    request.nextUrl.pathname.startsWith("/onboarding") ||
-    request.nextUrl.pathname.startsWith("/setup/username");
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/onboarding") ||
+    pathname.startsWith("/setup/username");
 
   if (!user && protectedRoute) {
     return redirectWithCookies(rootUrl("/login"), response);
   }
-  if (user && request.nextUrl.pathname === "/login") {
-    return redirectWithCookies(rootUrl("/setup/username"), response);
+
+  if (user && pathname === "/login") {
+    return redirectWithCookies(rootUrl("/dashboard"), response);
   }
+
   return response;
 }
 
 export const config = {
   matcher: [
-    "/dashboard/:path*",
-    "/onboarding/:path*",
-    "/setup/username/:path*",
-    "/login",
+    "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|auth/callback|api/health).*)",
   ],
 };

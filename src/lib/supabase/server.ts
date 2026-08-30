@@ -18,23 +18,67 @@ export async function createSupabaseServerClient() {
 
 export async function getSeedProfile() {
   const client = await createSupabaseServerClient();
-  if (!client) return { id: "demo-profile", username: null, demo: true };
+  if (!client) return null;
   const {
     data: { user },
   } = await client.auth.getUser();
   if (!user) return null;
-  const { data: profile, error } = await client
+
+  const { data: profile } = await client
     .from("profiles")
     .select("id,username")
     .eq("auth_user_id", user.id)
-    .single();
-  if (error || !profile) throw new Error("Seed profile not found.");
-  return { id: profile.id, username: profile.username as string | null, demo: false };
+    .maybeSingle();
+
+  if (profile) {
+    return { id: profile.id, username: profile.username as string | null, demo: false };
+  }
+
+  // If user was created via OAuth but trigger was missed or delayed, create profile via admin
+  const admin = createSupabaseAdminClient();
+  if (admin) {
+    const displayName =
+      user.user_metadata?.full_name ??
+      user.email?.split("@")[0] ??
+      "Seed User";
+    const avatarUrl = user.user_metadata?.avatar_url ?? null;
+
+    const { data: createdProfile } = await admin
+      .from("profiles")
+      .upsert(
+        {
+          auth_user_id: user.id,
+          display_name: displayName,
+          avatar_url: avatarUrl,
+        },
+        { onConflict: "auth_user_id" },
+      )
+      .select("id,username")
+      .single();
+
+    if (createdProfile) {
+      // Ensure workspace exists
+      await admin
+        .from("workspaces")
+        .upsert(
+          { owner_user_id: createdProfile.id, name: "My workspace" },
+          { onConflict: "owner_user_id" }
+        );
+
+      return {
+        id: createdProfile.id,
+        username: createdProfile.username as string | null,
+        demo: false,
+      };
+    }
+  }
+
+  return null;
 }
 
 export async function getSeedIdentity() {
   const client = await createSupabaseServerClient();
-  if (!client) return { id: "demo-user", name: "Demo user", email: "demo@seed.local", avatarUrl: null, demo: true };
+  if (!client) return null;
   const { data: { user } } = await client.auth.getUser();
   if (!user) return null;
   return { id: user.id, name: user.user_metadata.full_name ?? user.email?.split("@")[0] ?? "Seed user", email: user.email ?? "", avatarUrl: user.user_metadata.avatar_url ?? null, demo: false };

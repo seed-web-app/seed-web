@@ -2,7 +2,6 @@ import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { seedConfig } from "@/lib/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const projectSchema = z.object({
@@ -31,17 +30,6 @@ export async function POST(request: Request) {
     );
   }
 
-  if (seedConfig.demoMode) {
-    return NextResponse.json({
-      project: {
-        id: "demo-project",
-        name: parsed.data.name,
-        slug: slugify(parsed.data.name),
-      },
-      demo: true,
-    });
-  }
-
   const supabase = await createSupabaseServerClient();
   if (!supabase) {
     return NextResponse.json(
@@ -57,11 +45,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Sign in again to continue." }, { status: 401 });
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("auth_user_id", user.id)
-    .single();
+  const { getSeedProfile } = await import("@/lib/supabase/server");
+  const profile = await getSeedProfile();
   if (!profile) {
     return NextResponse.json(
       { message: "Your Seed profile is still being prepared." },

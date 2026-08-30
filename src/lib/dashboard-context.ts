@@ -1,6 +1,5 @@
 import "server-only";
 
-import { seedConfig } from "@/lib/config";
 import type { ProviderName } from "@/lib/providers/contracts";
 import {
   createSupabaseAdminClient,
@@ -73,24 +72,6 @@ const emptyCounts = { bookings: 0, customers: 0, media: 0 };
 export async function getDashboardContext(
   selectedProjectId?: string,
 ): Promise<DashboardContext> {
-  if (seedConfig.demoMode) {
-    return {
-      workspaceId: "demo-workspace",
-      username: null,
-      workspaceName: "Demo workspace",
-      projectId: "demo-project",
-      projectName: "My first project",
-      projectType: "business_website",
-      projectStatus: "draft",
-      websiteUrl: null,
-      projects: [],
-      recentRuns: [],
-      connections: {},
-      counts: emptyCounts,
-      demo: true,
-    };
-  }
-
   const supabase = await createSupabaseServerClient();
   const admin = createSupabaseAdminClient();
   if (!supabase || !admin) {
@@ -102,12 +83,18 @@ export async function getDashboardContext(
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Authentication required.");
 
-  const { data: profile } = await supabase
+  let { data: profile } = await supabase
     .from("profiles")
     .select("id,username")
     .eq("auth_user_id", user.id)
-    .single();
-  if (!profile) throw new Error("Seed profile not found.");
+    .maybeSingle();
+
+  if (!profile) {
+    const { getSeedProfile } = await import("@/lib/supabase/server");
+    const ensured = await getSeedProfile();
+    if (!ensured) throw new Error("Seed profile not found.");
+    profile = { id: ensured.id, username: ensured.username };
+  }
 
   const { data: workspace } = await supabase
     .from("workspaces")

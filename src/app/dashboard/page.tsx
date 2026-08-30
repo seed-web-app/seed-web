@@ -19,15 +19,25 @@ export default async function DashboardPage({
   ]);
 
   if (!identity) redirect(rootUrl("/login"));
-  if (!context.demo) {
-    if (!context.username) redirect(rootUrl("/setup/username"));
-    const tenant = usernameFromHost(requestHeaders.get("host"));
-    if (tenant !== context.username) {
-      const suffix = project ? `?project=${encodeURIComponent(project)}` : "";
-      redirect(dashboardUrl(context.username, `/dashboard${suffix}`));
-    }
+  if (!context.username) redirect(rootUrl("/setup/username"));
+
+  const host = requestHeaders.get("host");
+  const tenant = usernameFromHost(host);
+
+  // If visiting from a subdomain and it does NOT match the authenticated user's username,
+  // reject access to prevent User A accessing User B's dashboard.
+  if (tenant && tenant !== context.username) {
+    // Redirect to the user's own authorized dashboard
+    redirect(dashboardUrl(context.username, "/dashboard"));
   }
-  if (!context.demo && !context.projectId) redirect("/onboarding");
+
+  // If on the root domain, redirect to their private subdomain dashboard
+  if (!tenant && context.username) {
+    const suffix = project ? `?project=${encodeURIComponent(project)}` : "";
+    redirect(dashboardUrl(context.username, `/dashboard${suffix}`));
+  }
+
+  if (!context.projectId) redirect(rootUrl("/onboarding"));
 
   return <SeedDashboard identity={identity} context={context} />;
 }
