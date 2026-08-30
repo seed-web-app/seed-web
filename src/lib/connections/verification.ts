@@ -60,9 +60,11 @@ export async function verifyStoredConnection(
       };
     }
 
+    let refreshedUserToken: { access_token: string; refresh_token?: string; expires_in?: number } | undefined;
+
+    // 1. Verify installation token (for repo/file management)
     try {
       const token = await generateInstallationToken(appId, privateKey, installationId);
-      // Verify token with GitHub API by fetching installation details
       const res = await fetch("https://api.github.com/installation/repositories?per_page=1", {
         headers: {
           Accept: "application/vnd.github+json",
@@ -78,14 +80,66 @@ export async function verifyStoredConnection(
           error: `GitHub App installation token could not access repositories (${res.status}).`,
         };
       }
-
-      return { valid: true, accountLogin };
     } catch (err) {
       return {
         valid: false,
         error: `GitHub verification failed: ${err instanceof Error ? err.message : "Unknown error"}`,
       };
     }
+
+    // 2. If user account, verify and refresh user access token if available
+    const isUserAccount = (parsed.accountType as string | undefined ?? "User") === "User";
+    const userAccessToken = parsed.access_token as string | undefined;
+    const userRefreshToken = parsed.refresh_token as string | undefined;
+
+    if (isUserAccount && userAccessToken) {
+      const userRes = await fetch("https://api.github.com/user", {
+        headers: {
+          Accept: "application/vnd.github+json",
+          Authorization: `Bearer ${userAccessToken}`,
+          "X-GitHub-Api-Version": "2022-11-28",
+        },
+        cache: "no-store",
+      });
+
+      if (!userRes.ok && userRefreshToken && process.env.GITHUB_APP_CLIENT_ID && process.env.GITHUB_APP_CLIENT_SECRET) {
+        try {
+          const { refreshGitHubUserToken } = await import("@/lib/providers/github");
+          const refreshed = await refreshGitHubUserToken(
+            userRefreshToken,
+            process.env.GITHUB_APP_CLIENT_ID,
+            process.env.GITHUB_APP_CLIENT_SECRET,
+          );
+          refreshedUserToken = refreshed;
+        } catch {
+          return {
+            valid: false,
+            error: "GitHub user authorization expired. Please reconnect GitHub.",
+          };
+        }
+      } else if (!userRes.ok) {
+        return {
+          valid: false,
+          error: "GitHub user authorization invalid. Please reconnect GitHub.",
+        };
+      }
+    }
+
+    return {
+      valid: true,
+      accountLogin,
+      metadata: refreshedUserToken
+        ? {
+            refreshed: true,
+            newTokens: {
+              ...parsed,
+              access_token: refreshedUserToken.access_token,
+              refresh_token: refreshedUserToken.refresh_token ?? userRefreshToken,
+              expires_in: refreshedUserToken.expires_in,
+            },
+          }
+        : undefined,
+    };
   }
 
   if (provider === "supabase") {
