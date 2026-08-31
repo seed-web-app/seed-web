@@ -197,15 +197,30 @@ async function upsertResource(
 
 // ── Preview verification ──────────────────────────────────────────────────────
 
-async function verifyPreviewUrl(
+export async function verifyPreviewUrl(
   previewUrl: string,
   maxAttempts = 6,
   delayMs = 10_000,
-): Promise<{ ok: boolean; reason?: string }> {
+): Promise<{ ok: boolean; reason?: string; protected?: boolean }> {
   const healthUrl = `${previewUrl.replace(/\/$/, "")}/api/health`;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
-      const res = await fetch(healthUrl, { cache: "no-store", signal: AbortSignal.timeout(15_000) });
+      const res = await fetch(healthUrl, {
+        cache: "no-store",
+        redirect: "manual",
+        signal: AbortSignal.timeout(15_000),
+      });
+      const location = res.headers.get("location");
+      if (
+        [301, 302, 303, 307, 308].includes(res.status) &&
+        location?.startsWith("https://vercel.com/sso-api")
+      ) {
+        return {
+          ok: true,
+          protected: true,
+          reason: "vercel_authentication_required",
+        };
+      }
       if (res.ok) {
         const body = (await res.json()) as { ok?: boolean; reason?: string };
         if (body.ok) return { ok: true };
@@ -858,6 +873,7 @@ export async function executeSeedRun(ctx: ExecutorContext): Promise<void> {
       await audit(admin, ctx, "inspect_deployment", {
         previewUrl,
         verificationPassed: true,
+        protectedByVercelAuthentication: result.protected === true,
       });
     });
 
