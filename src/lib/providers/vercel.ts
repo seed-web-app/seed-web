@@ -166,7 +166,6 @@ export class VercelDeploymentProvider implements DeploymentProvider {
         body: JSON.stringify({
           name: this.resolvedProject?.name ?? this.projectIdentifier,
           project: this.targetProjectId(),
-          target: null,
         }),
       },
     );
