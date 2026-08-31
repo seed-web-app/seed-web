@@ -99,10 +99,17 @@ export class VercelDeploymentProvider implements DeploymentProvider {
     return project;
   }
 
-  async createProject(name: string): Promise<VercelProjectIdentity> {
+  async createProject(
+    name: string,
+    gitRepository?: { type: "github"; repo: string },
+  ): Promise<VercelProjectIdentity> {
     const project = await this.request<VercelProjectIdentity>(`/v11/projects${this.qs()}`, {
       method: "POST",
-      body: JSON.stringify({ name, framework: "nextjs" }),
+      body: JSON.stringify({
+        name,
+        framework: "nextjs",
+        ...(gitRepository ? { gitRepository } : {}),
+      }),
     });
     this.resolvedProject = project;
     this.projectIdentifier = project.id;
@@ -110,14 +117,17 @@ export class VercelDeploymentProvider implements DeploymentProvider {
   }
 
   /** Idempotent: get existing project or create it. */
-  async createOrReuseProject(name: string): Promise<VercelProjectIdentity> {
+  async createOrReuseProject(
+    name: string,
+    gitRepository?: { type: "github"; repo: string },
+  ): Promise<VercelProjectIdentity> {
     const existing = await this.getProject(name);
     if (existing) {
       this.resolvedProject = existing;
       this.projectIdentifier = existing.id;
       return existing;
     }
-    return this.createProject(name);
+    return this.createProject(name, gitRepository);
   }
 
   // ── Environment variables ───────────────────────────────────────────────────

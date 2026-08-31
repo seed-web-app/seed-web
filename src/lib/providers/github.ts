@@ -4,6 +4,18 @@ import type { RepositoryState, SourceProvider } from "@/lib/providers/contracts"
 
 type GitHubFile = { path: string; content: string };
 
+export interface GitHubCreds {
+  installationId: string;
+  accountLogin: string;
+  accountType?: string;
+  access_token?: string;
+  refresh_token?: string;
+  expires_in?: number;
+  refresh_token_expires_in?: number;
+  token_type?: string;
+  obtained_at?: string;
+}
+
 // ── Installation token ────────────────────────────────────────────────────────
 
 /**

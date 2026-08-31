@@ -426,27 +426,30 @@ export function SeedDashboard({
           <EmptyDataView
             eyebrow={projectName}
             title="Customers"
-            copy="Customer records will appear after the project database is connected."
+            copy="Customer records from contact and booking submissions."
             icon={Users}
             navigate={navigate}
+            isResourceConnected={context.connections.supabase === "Connected"}
           />
         )}
         {view === "bookings" && (
           <EmptyDataView
             eyebrow={projectName}
             title="Bookings"
-            copy="Booking requests will appear after the booking database is connected."
+            copy="Booking requests submitted through your website."
             icon={CalendarDays}
             navigate={navigate}
+            isResourceConnected={context.connections.supabase === "Connected"}
           />
         )}
         {view === "media" && (
           <EmptyDataView
             eyebrow={projectName}
             title="Media"
-            copy="Project images will appear after storage is connected."
+            copy="Project media and image assets."
             icon={ImageIcon}
             navigate={navigate}
+            isResourceConnected={true}
           />
         )}
         {view === "ask" && (
@@ -874,40 +877,77 @@ function WebsiteView({
   context: DashboardContext;
   navigate: (view: View) => void;
 }) {
+  const isLive = Boolean(context.productionUrl);
+  const isPreview = !isLive && Boolean(context.previewUrl);
+  const activeUrl = context.productionUrl ?? context.previewUrl ?? context.websiteUrl;
+
   return (
     <>
       <PageTitle
         eyebrow={context.projectName}
         title="Website"
-        copy="Publishing information from the connected Vercel project."
+        copy={
+          isLive
+            ? "Your website is live in production on Vercel."
+            : isPreview
+              ? "Your website preview is ready on Vercel."
+              : "Publishing information from the connected Vercel project."
+        }
         action={
-          context.websiteUrl ? (
-            <a
-              className="primary-action"
-              href={context.websiteUrl}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <ExternalLink size={16} /> Open live website
-            </a>
+          activeUrl ? (
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <a
+                className="primary-action"
+                href={activeUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <ExternalLink size={16} /> {isLive ? "Open live website" : "Open preview"}
+              </a>
+              <button className="secondary-button" onClick={() => navigate("ask")}>
+                <Sparkles size={14} /> Make a change
+              </button>
+            </div>
           ) : undefined
         }
       />
-      {context.websiteUrl ? (
+      {activeUrl ? (
         <article className="panel deployment-card">
-          <span className="status-pill live">Live</span>
+          <span className={`status-pill ${isLive ? "live" : "building"}`}>
+            {isLive ? "Live" : "Preview Ready"}
+          </span>
           <Globe2 size={34} />
           <h2>{context.projectName}</h2>
-          <a href={context.websiteUrl} target="_blank" rel="noreferrer">
-            {context.websiteUrl}
+          <a href={activeUrl} target="_blank" rel="noreferrer">
+            {activeUrl}
           </a>
-          <p>The deployment URL was read from this project&apos;s connected resources.</p>
+          <p>
+            {isLive
+              ? "Live production website hosted on Vercel."
+              : "Latest preview deployment ready for your review."}
+          </p>
+          {context.latestCommitSha && (
+            <small style={{ opacity: 0.7, marginTop: "0.5rem", display: "block" }}>
+              Latest commit: <code>{context.latestCommitSha.slice(0, 7)}</code>
+            </small>
+          )}
         </article>
-      ) : (
+      ) : context.connections.vercel === "Connected" ? (
         <EmptyState
           icon={Cloud}
           title="No website deployment yet"
-          copy="Connect Vercel and approve a Seed build before a website appears here."
+          copy="Vercel is connected. Ask Seed to build your website to create the first deployment."
+          action={
+            <button className="primary-action" onClick={() => navigate("ask")}>
+              <Sparkles size={16} /> Ask Seed to build
+            </button>
+          }
+        />
+      ) : (
+        <EmptyState
+          icon={Cloud}
+          title="Hosting not connected"
+          copy="Connect Vercel in settings to host and publish your website."
           action={
             <button className="primary-action" onClick={() => navigate("settings")}>
               Connect Vercel
@@ -925,12 +965,14 @@ function EmptyDataView({
   copy,
   icon,
   navigate,
+  isResourceConnected = true,
 }: {
   eyebrow: string;
   title: string;
   copy: string;
   icon: LucideIcon;
   navigate: (view: View) => void;
+  isResourceConnected?: boolean;
 }) {
   return (
     <>
@@ -938,11 +980,17 @@ function EmptyDataView({
       <EmptyState
         icon={icon}
         title={`No ${title.toLowerCase()} yet`}
-        copy="Seed will show real records here after the required project service is connected."
+        copy={
+          isResourceConnected
+            ? `Your database is connected. Records will appear here as users submit forms on your website.`
+            : `Seed will show real records here after the database service is connected.`
+        }
         action={
-          <button className="primary-action" onClick={() => navigate("settings")}>
-            Review connections
-          </button>
+          !isResourceConnected ? (
+            <button className="primary-action" onClick={() => navigate("settings")}>
+              Review connections
+            </button>
+          ) : undefined
         }
       />
     </>
@@ -978,7 +1026,30 @@ function AskView({
   const [approving, setApproving] = useState(false);
   const [approveError, setApproveError] = useState<string | null>(null);
   const [publishing, setPublishing] = useState(false);
+  const [chatMessages, setChatMessages] = useState<Array<{ id: string; sender: string; content: string; createdAt?: string }>>([]);
+  const [sendingChat, setSendingChat] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const chatScrollRef = useRef<HTMLDivElement | null>(null);
+
+  // Fetch persistent conversation history for this project
+  useEffect(() => {
+    if (!projectId) return;
+    fetch(`/api/chat?projectId=${encodeURIComponent(projectId)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.messages) {
+          setChatMessages(data.messages);
+        }
+      })
+      .catch(() => {});
+  }, [projectId]);
+
+  // Scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
 
   const isRunning =
     runStatus?.run.status === "running";
@@ -1123,25 +1194,112 @@ function AskView({
       )}
       <section className="ask-layout">
         <article className="chat-panel panel">
-          <div className="chat-empty">
-            <div className="seed-mark">
-              <Sparkles />
+          {chatMessages.length > 0 ? (
+            <div
+              ref={chatScrollRef}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.85rem",
+                padding: "1rem",
+                overflowY: "auto",
+                maxHeight: "380px",
+                flex: 1,
+              }}
+            >
+              {chatMessages.map((msg) => (
+                <div
+                  key={msg.id}
+                  style={{
+                    alignSelf: msg.sender === "user" ? "flex-end" : "flex-start",
+                    background: msg.sender === "user" ? "#1e293b" : "#f1f5f9",
+                    color: msg.sender === "user" ? "#ffffff" : "#0f172a",
+                    borderRadius: "0.75rem",
+                    padding: "0.6rem 0.9rem",
+                    maxWidth: "82%",
+                    fontSize: "0.875rem",
+                    lineHeight: "1.45",
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                  }}
+                >
+                  <b style={{ fontSize: "0.75rem", display: "block", marginBottom: "0.2rem", opacity: 0.75 }}>
+                    {msg.sender === "user" ? "You" : "Seed"}
+                  </b>
+                  {msg.content}
+                </div>
+              ))}
+              {sendingChat && (
+                <div
+                  style={{
+                    alignSelf: "flex-start",
+                    background: "#f1f5f9",
+                    color: "#64748b",
+                    borderRadius: "0.75rem",
+                    padding: "0.5rem 0.8rem",
+                    fontSize: "0.85rem",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.4rem",
+                  }}
+                >
+                  <LoaderCircle className="spin" size={14} /> Seed is thinking…
+                </div>
+              )}
             </div>
-            <h2>What should we work on?</h2>
-            <p>Use plain language in Hindi or English.</p>
-            <div>
-              <button onClick={() => setRequest("Build the first version of my website")}>
-                Build my website
-              </button>
-              <button onClick={() => setRequest("Add a contact form")}>
-                Add a contact form
-              </button>
-              <button onClick={() => setRequest("Add booking requests")}>
-                Add bookings
-              </button>
+          ) : (
+            <div className="chat-empty">
+              <div className="seed-mark">
+                <Sparkles />
+              </div>
+              <h2>What should we work on?</h2>
+              <p>Use plain language in Hindi or English.</p>
+              <div>
+                <button onClick={() => setRequest("Build the first version of my website")}>
+                  Build my website
+                </button>
+                <button onClick={() => setRequest("Add a contact form")}>
+                  Add a contact form
+                </button>
+                <button onClick={() => setRequest("Add booking requests")}>
+                  Add bookings
+                </button>
+              </div>
             </div>
-          </div>
-          <form className="chat-input" onSubmit={submit}>
+          )}
+          <form
+            className="chat-input"
+            onSubmit={async (event) => {
+              if (request.trim() && projectId) {
+                const currentText = request;
+                setSendingChat(true);
+                // Also trigger planning flow
+                submit(event);
+                // Send to persistent chat
+                fetch("/api/chat", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ projectId, message: currentText }),
+                })
+                  .then((res) => (res.ok ? res.json() : null))
+                  .then((data) => {
+                    if (data?.message) {
+                      setChatMessages((prev) => [
+                        ...prev,
+                        { id: "tmp-" + Date.now(), sender: "user", content: currentText },
+                        data.message,
+                      ]);
+                    }
+                  })
+                  .catch(() => {})
+                  .finally(() => {
+                    setSendingChat(false);
+                  });
+              } else {
+                submit(event);
+              }
+            }}
+          >
             <textarea
               value={request}
               onChange={(event) => setRequest(event.target.value)}

@@ -650,9 +650,14 @@ export async function executeSeedRun(ctx: ExecutorContext): Promise<void> {
         vercelProjectId || ctx.projectSlug,
         vercelTeamId || undefined,
       );
+      const gitRepo =
+        repoName && gitHubOwner
+          ? { type: "github" as const, repo: `${gitHubOwner}/${repoName}` }
+          : undefined;
+
       const project = vercelProjectId
         ? await vercel.requireProject(vercelProjectId, vercelAccountId || vercelTeamId || undefined)
-        : await vercel.createOrReuseProject(ctx.projectSlug);
+        : await vercel.createOrReuseProject(ctx.projectSlug, gitRepo);
       vercelProjectId = project.id;
       vercelProjectName = project.name;
       vercelAccountId = project.accountId ?? vercelTeamId;

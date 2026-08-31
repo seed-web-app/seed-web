@@ -34,6 +34,9 @@ export type DashboardContext = {
   projectType: string;
   projectStatus: ProjectStatus;
   websiteUrl: string | null;
+  previewUrl: string | null;
+  productionUrl: string | null;
+  latestCommitSha: string | null;
   projects: DashboardProject[];
   recentRuns: DashboardRun[];
   connections: Partial<
@@ -62,12 +65,43 @@ function websiteUrlFor(projectId: string, resources: ResourceRow[]) {
 
   const metadata = resource.metadata_json ?? {};
   const candidate =
-    metadata.productionUrl ?? metadata.production_url ?? metadata.url ?? resource.external_id;
+    metadata.productionUrl ?? metadata.production_url ?? metadata.previewUrl ?? metadata.preview_url ?? metadata.url ?? resource.external_id;
   if (typeof candidate !== "string" || !candidate) return null;
   return candidate.startsWith("http") ? candidate : `https://${candidate}`;
 }
 
-const emptyCounts = { bookings: 0, customers: 0, media: 0 };
+function previewUrlFor(projectId: string, resources: ResourceRow[]) {
+  const resource = resources.find(
+    (row) => row.project_id === projectId && row.provider === "vercel",
+  );
+  if (!resource) return null;
+
+  const metadata = resource.metadata_json ?? {};
+  const candidate = metadata.previewUrl ?? metadata.preview_url;
+  if (typeof candidate !== "string" || !candidate) return null;
+  return candidate.startsWith("http") ? candidate : `https://${candidate}`;
+}
+
+function productionUrlFor(projectId: string, resources: ResourceRow[]) {
+  const resource = resources.find(
+    (row) => row.project_id === projectId && row.provider === "vercel",
+  );
+  if (!resource) return null;
+
+  const metadata = resource.metadata_json ?? {};
+  const candidate = metadata.productionUrl ?? metadata.production_url;
+  if (typeof candidate !== "string" || !candidate) return null;
+  return candidate.startsWith("http") ? candidate : `https://${candidate}`;
+}
+
+function latestCommitShaFor(projectId: string, resources: ResourceRow[]) {
+  const resource = resources.find(
+    (row) => row.project_id === projectId && row.provider === "github",
+  );
+  if (!resource) return null;
+  const metadata = resource.metadata_json ?? {};
+  return (metadata.commitSha as string) || (metadata.commit_sha as string) || null;
+}
 
 export async function getDashboardContext(
   selectedProjectId?: string,
@@ -201,6 +235,56 @@ export async function getDashboardContext(
     }
   }
 
+  const activePreviewUrl = selected ? previewUrlFor(selected.id, resources) : null;
+  const activeProductionUrl = selected ? productionUrlFor(selected.id, resources) : null;
+  const activeCommitSha = selected ? latestCommitShaFor(selected.id, resources) : null;
+  const activeWebsiteUrl = activeProductionUrl ?? activePreviewUrl ?? (selected ? websiteUrlFor(selected.id, resources) : null);
+
+  let reconciledStatus: ProjectStatus = selected?.status ?? "draft";
+  if (activeProductionUrl) {
+    reconciledStatus = "live";
+  } else if (activePreviewUrl) {
+    reconciledStatus = "building";
+  }
+
+  // Load real counts from client Supabase project if available
+  const counts = { bookings: 0, customers: 0, media: 0 };
+  const sbResource = resources.find((r) => r.project_id === selected?.id && r.provider === "supabase");
+  if (sbResource && connections.supabase === "Connected") {
+    try {
+      const sbMeta = sbResource.metadata_json ?? {};
+      const projectRef = (sbMeta.projectRef as string) || sbResource.external_id;
+      const sbConn = connectionRows?.find((c) => c.provider === "supabase");
+      if (sbConn?.encrypted_access_data && projectRef) {
+        const { decryptCredential } = await import("@/lib/security/crypto");
+        const creds = JSON.parse(decryptCredential(sbConn.encrypted_access_data)) as { access_token: string };
+        const queryRes = await fetch(`https://api.supabase.com/v1/projects/${projectRef}/database/query`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${creds.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            query: `
+              select 
+                (select count(*) from public.bookings) as bookings,
+                (select count(*) from public.customers) as customers;
+            `,
+          }),
+        });
+        if (queryRes.ok) {
+          const rows = (await queryRes.json()) as Array<{ bookings: number; customers: number }>;
+          if (rows?.[0]) {
+            counts.bookings = Number(rows[0].bookings) || 0;
+            counts.customers = Number(rows[0].customers) || 0;
+          }
+        }
+      }
+    } catch {
+      // Non-fatal
+    }
+  }
+
   return {
     username: profile.username as string | null,
     workspaceId: workspace.id,
@@ -208,8 +292,11 @@ export async function getDashboardContext(
     projectId: selected?.id ?? "",
     projectName: selected?.name ?? "",
     projectType: selected?.project_type ?? "business_website",
-    projectStatus: selected?.status ?? "draft",
-    websiteUrl: selected ? websiteUrlFor(selected.id, resources) : null,
+    projectStatus: reconciledStatus,
+    websiteUrl: activeWebsiteUrl,
+    previewUrl: activePreviewUrl,
+    productionUrl: activeProductionUrl,
+    latestCommitSha: activeCommitSha,
     projects,
     recentRuns: (runRows ?? []).map((run) => ({
       id: run.id,
@@ -218,7 +305,7 @@ export async function getDashboardContext(
       createdAt: run.created_at,
     })),
     connections,
-    counts: emptyCounts,
+    counts,
     demo: false,
   };
 }
