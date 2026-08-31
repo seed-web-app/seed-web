@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { after } from "next/server";
 import { z } from "zod";
 import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
-import { executeSeedRun, EXECUTOR_STEPS } from "@/lib/engine/executor";
+import { executeSeedRun, EXECUTOR_STEPS, CHANGE_STEPS } from "@/lib/engine/executor";
 import type { ExecutorContext } from "@/lib/engine/executor";
 import { seedLog } from "@/lib/logger";
 
@@ -98,12 +98,20 @@ export async function POST(request: Request) {
   }
 
   // Ensure step records exist for all executor steps (idempotent insert)
+  const { data: runData } = await admin
+    .from("seed_runs")
+    .select("run_type")
+    .eq("id", runId)
+    .single();
+  const isChangeRun = runData?.run_type === "change";
+  const targetSteps = isChangeRun ? CHANGE_STEPS : EXECUTOR_STEPS;
+
   const { data: existingSteps } = await admin
     .from("seed_run_steps")
     .select("step_type")
     .eq("seed_run_id", runId);
   const existingStepTypes = new Set((existingSteps ?? []).map((s) => s.step_type));
-  const missingSteps = EXECUTOR_STEPS.filter((s) => !existingStepTypes.has(s));
+  const missingSteps = targetSteps.filter((s) => !existingStepTypes.has(s));
   if (missingSteps.length) {
     await admin.from("seed_run_steps").insert(
       missingSteps.map((step_type) => ({

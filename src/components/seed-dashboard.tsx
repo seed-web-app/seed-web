@@ -1439,26 +1439,38 @@ function AskView({
               </div>
               {approveError && <p className="step-error">{approveError}</p>}
               {pendingRunId ? (
-                <button
-                  className="primary-action full"
-                  onClick={() => { void approve(); }}
-                  disabled={approving}
-                >
-                  {approving ? (
-                    <LoaderCircle className="spin" size={16} />
-                  ) : (
-                    <Rocket size={16} />
-                  )}
-                  {approving ? "Starting…" : "Approve & Create Preview"}
-                </button>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  <button
+                    className="primary-action full"
+                    onClick={() => { void approve(); }}
+                    disabled={approving}
+                    style={{ background: "#059669", borderColor: "#059669" }}
+                  >
+                    {approving ? (
+                      <LoaderCircle className="spin" size={16} />
+                    ) : (
+                      <Rocket size={16} />
+                    )}
+                    {approving ? "Applying changes…" : "Apply Changes"}
+                  </button>
+                  <button
+                    className="secondary-button full"
+                    onClick={() => {
+                      // Allow editing request
+                      setRequest(request);
+                    }}
+                    disabled={approving}
+                  >
+                    Edit Plan
+                  </button>
+                </div>
               ) : (
                 <button className="primary-action full" disabled>
                   <Rocket size={16} /> Preview requires provider connections
                 </button>
               )}
               <small className="approval-note">
-                <ShieldCheck size={13} /> Production publishing remains blocked until every
-                required check passes.
+                <ShieldCheck size={13} /> Guarded by Seed. Only affected files will be updated.
               </small>
             </>
           )}

@@ -24,6 +24,10 @@ export async function POST(request: Request) {
     if(connection){try{apiKey=(JSON.parse(decryptCredential(connection.encrypted_access_data))as{apiKey?:string}).apiKey;}catch{return NextResponse.json({message:"Seed AI needs to be reconnected."},{status:409});}}
   }
   let message=apiKey?"Seed prepared a safe plan. Review it before creating a preview.":"A safe plan is ready. Activate Seed AI for a project-specific AI plan.";if(apiKey){try{plan=await new OpenAISeedProvider(apiKey).plan({request:parsed.data.request,skills});}catch(error){message="Seed AI could not be reached, so a safe fallback plan was prepared.";seedLog("warn","seed_ai_fallback",{projectId:parsed.data.projectId,error:error instanceof Error?error.message:"unknown"});}}
-  const runId=randomUUID();if(liveContext){const{admin,profileId,workspaceId,projectId}=liveContext;const{error:runError}=await admin.from("seed_runs").insert({id:runId,project_id:projectId,user_request:parsed.data.request,status:"waiting_for_user"});if(!runError){await admin.from("seed_run_steps").insert(plan.steps.map((step,index)=>({seed_run_id:runId,step_type:`${index+1}_${step.kind}`,status:"pending",input_summary:step.title})));await admin.from("audit_events").insert({actor_user_id:profileId,workspace_id:workspaceId,project_id:projectId,seed_run_id:runId,tool_name:"plan_seed_run",metadata:{skills,guardPassed:true}});}}
+  const runId=randomUUID();if(liveContext){const{admin,profileId,workspaceId,projectId}=liveContext;
+    const { data: existingGh } = await admin.from("project_resources").select("id").eq("project_id", projectId).eq("provider", "github").maybeSingle();
+    const runType = existingGh ? "change" : "initial";
+    const {error:runError}=await admin.from("seed_runs").insert({id:runId,project_id:projectId,user_request:parsed.data.request,status:"waiting_for_user",run_type:runType});
+    if(!runError){await admin.from("seed_run_steps").insert(plan.steps.map((step,index)=>({seed_run_id:runId,step_type:`${index+1}_${step.kind}`,status:"pending",input_summary:step.title})));await admin.from("audit_events").insert({actor_user_id:profileId,workspace_id:workspaceId,project_id:projectId,seed_run_id:runId,tool_name:"plan_seed_run",metadata:{skills,guardPassed:true,runType}});}}
   return NextResponse.json({runId,skills,guard,plan,message});
 }

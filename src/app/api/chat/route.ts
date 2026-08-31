@@ -152,9 +152,11 @@ LIVE RECONCILED STATE:
 - GitHub Repository: ${state?.github.repoUrl ?? "Connected"}
 
 GUIDELINES:
-- If the user asks about website state (e.g. pages, URLs, bookings count), answer directly using the live reconciled state above.
-- If the user asks to modify the website (e.g. change heading, add service, change color), acknowledge the specific request, explain the incremental plan simply, and guide them to approve the change plan.
-- Never pretend or hallucinate state that contradicts the LIVE RECONCILED STATE above.`;
+- Distinguish between:
+  1. Question / Inquiry: Answer directly and accurately using LIVE RECONCILED STATE and PROJECT MEMORY.
+  2. Requested Website Change: Formulate a clear, concise plan of what will be changed in the website files and state that the plan is ready for them to review and click 'Apply Changes' on the right panel to execute.
+- IMPORTANT: DO NOT claim or say "I will implement these changes now!", "I've implemented it", or "Would you like to proceed?" in chat text. Instead, say: "Here is the change plan. Click 'Apply Changes' in the Build Plan panel to inspect and deploy the updates."
+- Never claim that files were updated or commits were pushed until an execution run actually starts and finishes.`;
 
         const completion = await client.chat.completions.create({
           model: "gpt-4o-mini",

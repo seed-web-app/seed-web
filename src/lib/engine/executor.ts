@@ -38,7 +38,17 @@ export const EXECUTOR_STEPS = [
   "record_snapshot",
 ] as const;
 
-export type ExecutorStep = (typeof EXECUTOR_STEPS)[number];
+export const CHANGE_STEPS = [
+  "inspect",
+  "generate_files",
+  "guard",
+  "github_push",
+  "vercel_deploy",
+  "verify_preview",
+  "record_snapshot",
+] as const;
+
+export type ExecutorStep = (typeof EXECUTOR_STEPS)[number] | (typeof CHANGE_STEPS)[number];
 
 // ── Context for one run ───────────────────────────────────────────────────────
 
@@ -305,6 +315,25 @@ export async function executeSeedRun(ctx: ExecutorContext): Promise<void> {
     }
   }
 
+  // Determine run type and user request
+  const { data: runData } = await admin
+    .from("seed_runs")
+    .select("user_request,run_type")
+    .eq("id", ctx.runId)
+    .maybeSingle();
+
+  const isChangeRun = runData?.run_type === "change";
+  const userRequestText = runData?.user_request ?? "";
+
+  // If this is a change run, mark unchanged infrastructure steps as skipped/completed immediately
+  if (isChangeRun) {
+    statuses.github_repo = "completed";
+    statuses.supabase_project = "completed";
+    statuses.supabase_migrate = "completed";
+    statuses.vercel_project = "completed";
+    statuses.vercel_env = "completed";
+  }
+
   try {
     // ── 1. Inspect ─────────────────────────────────────────────────────────
     await runStep(ctx.runId, "inspect", statuses, async () => {
@@ -318,13 +347,99 @@ export async function executeSeedRun(ctx: ExecutorContext): Promise<void> {
     // ── 2. Generate files ──────────────────────────────────────────────────
     let generatedFiles: Array<{ path: string; content: string }> = [];
     await runStep(ctx.runId, "generate_files", statuses, async () => {
-      generatedFiles = generateBookingApp({
-        projectName: ctx.projectName,
-        supabaseUrl: supabaseUrl || "https://placeholder.supabase.co",
-        supabasePublishableKey: supabasePublishableKey || "placeholder-key",
-        adminSecret: "",
-      });
-      await audit(admin, ctx, "generate_files", { fileCount: generatedFiles.length });
+      if (isChangeRun && repoName && gitHubOwner) {
+        // Incremental generation: read current repo files and modify only needed files
+        if (!gitHubToken) {
+          const encryptedGhCreds = await getProviderCredentials(admin, ctx.workspaceId, "github");
+          const ghCreds = JSON.parse(decryptCredential(encryptedGhCreds)) as GitHubCreds;
+          const appId = process.env.GITHUB_APP_ID!;
+          const privateKey = process.env.GITHUB_APP_PRIVATE_KEY!;
+          gitHubToken = await generateInstallationToken(appId, privateKey, ghCreds.installationId);
+        }
+
+        const github = new GitHubSourceProvider(gitHubToken, gitHubOwner, repoName);
+        const repoState = await github.getRepositoryState();
+        const existingPagePaths = ["src/app/page.tsx", "src/app/layout.tsx", "src/components/hero.tsx", "src/components/services.tsx", "src/components/contact-form.tsx"].filter(p => repoState.files.some(f => f.path === p));
+        const existingFiles = await github.readFiles(existingPagePaths.length ? existingPagePaths : repoState.files.slice(0, 10).map(f => f.path));
+
+        // Get Project Memory
+        const { getProjectMemory } = await import("@/lib/project-memory");
+        const memory = await getProjectMemory(ctx.projectId, ctx.workspaceId);
+
+        let openAiKey: string | undefined;
+        try {
+          const encKey = await getProviderCredentials(admin, ctx.workspaceId, "openai");
+          const creds = JSON.parse(decryptCredential(encKey)) as { apiKey?: string };
+          openAiKey = creds.apiKey;
+        } catch {}
+
+        if (openAiKey) {
+          const { OpenAI } = await import("openai");
+          const client = new OpenAI({ apiKey: openAiKey });
+          const filesContext = existingFiles.map(f => `--- FILE: ${f.path} ---\n${f.content}`).join("\n\n");
+          const prompt = `You are updating a Next.js website for ${ctx.projectName}.
+USER REQUEST: "${userRequestText}"
+
+PROJECT MEMORY:
+- Business: ${memory.businessName} (${memory.businessType})
+- Style: ${memory.stylePreferences}
+- Pages: ${memory.pages.join(", ")}
+- Decisions: ${memory.userDecisions.join("; ")}
+
+EXISTING RELEVANT FILES:
+${filesContext}
+
+INSTRUCTIONS:
+- Modify ONLY the file(s) needed to satisfy the user request (e.g. adding content, improving sections, adding images from Unsplash).
+- Preserve existing Tailwind styling, components, imports, and functionality.
+- Return a JSON object with this EXACT structure:
+{
+  "summary": "Brief explanation of changes",
+  "files": [
+    {
+      "path": "src/app/page.tsx",
+      "content": "...entire updated file content..."
+    }
+  ]
+}`;
+          const completion = await client.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [{ role: "user", content: prompt }],
+            response_format: { type: "json_object" },
+          });
+
+          const parsed = JSON.parse(completion.choices[0]?.message?.content ?? "{}") as {
+            files?: Array<{ path: string; content: string }>;
+          };
+          if (parsed.files && parsed.files.length) {
+            generatedFiles = parsed.files;
+          }
+        }
+
+        // Fallback if AI didn't modify files
+        if (!generatedFiles.length && existingFiles.length) {
+          const pageFile = existingFiles.find(f => f.path === "src/app/page.tsx");
+          if (pageFile) {
+            const updated = pageFile.content.replace(
+              /<h1[^>]*>[\s\S]*?<\/h1>/,
+              `<h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-gray-900 mb-4">${ctx.projectName}</h1>\n<p className="text-lg text-gray-600 mb-6">${userRequestText}</p>`,
+            );
+            generatedFiles = [{ path: "src/app/page.tsx", content: updated }];
+          }
+        }
+      }
+
+      if (!generatedFiles.length) {
+        // Initial build generation
+        generatedFiles = generateBookingApp({
+          projectName: ctx.projectName,
+          supabaseUrl: supabaseUrl || "https://placeholder.supabase.co",
+          supabasePublishableKey: supabasePublishableKey || "placeholder-key",
+          adminSecret: "",
+        });
+      }
+
+      await audit(admin, ctx, "generate_files", { fileCount: generatedFiles.length, isChangeRun });
     });
 
     // ── 3. Seed Guard with Automatic Repair Loop ──────────────────────────
@@ -492,13 +607,15 @@ export async function executeSeedRun(ctx: ExecutorContext): Promise<void> {
 
     // ── 5. GitHub push ─────────────────────────────────────────────────────
     await runStep(ctx.runId, "github_push", statuses, async () => {
-      // Re-generate files with final (or placeholder) Supabase values
-      generatedFiles = generateBookingApp({
-        projectName: ctx.projectName,
-        supabaseUrl: supabaseUrl || "https://placeholder.supabase.co",
-        supabasePublishableKey: supabasePublishableKey || "placeholder-key",
-        adminSecret: "",
-      });
+      if (!isChangeRun && !generatedFiles.length) {
+        // Re-generate files with final (or placeholder) Supabase values for initial build
+        generatedFiles = generateBookingApp({
+          projectName: ctx.projectName,
+          supabaseUrl: supabaseUrl || "https://placeholder.supabase.co",
+          supabasePublishableKey: supabasePublishableKey || "placeholder-key",
+          adminSecret: "",
+        });
+      }
 
       if (!gitHubToken) {
         // Regenerate token (step may be resuming after partial failure)
@@ -783,7 +900,7 @@ export async function executeSeedRun(ctx: ExecutorContext): Promise<void> {
       );
 
       let deployment: { id: string; url: string } | null = null;
-      if (vercelDeploymentId) {
+      if (!isChangeRun && vercelDeploymentId) {
         const existingStatus = await vercel.getDeploymentStatus(vercelDeploymentId);
         if (existingStatus !== "error") {
           deployment = { id: vercelDeploymentId, url: previewUrl };
