@@ -1,4 +1,5 @@
 import "server-only";
+import { createHash } from "node:crypto";
 import type { DeploymentProvider } from "@/lib/providers/contracts";
 
 export interface VercelProjectIdentity {
@@ -53,7 +54,8 @@ export class VercelDeploymentProvider implements DeploymentProvider {
       );
     }
     if (response.status === 204) return {} as T;
-    return response.json() as Promise<T>;
+    const text = await response.text();
+    return (text ? JSON.parse(text) : {}) as T;
   }
 
   // ── Project ─────────────────────────────────────────────────────────────────
@@ -157,8 +159,35 @@ export class VercelDeploymentProvider implements DeploymentProvider {
 
   // ── Deployment ──────────────────────────────────────────────────────────────
 
-  /** Trigger a deployment (no git push required — Vercel pulls from linked repo). */
-  async deploy(): Promise<{ id: string; url: string }> {
+  /**
+   * Upload the exact repository snapshot, then create a preview deployment.
+   * File uploads are content-addressed and safe to repeat after a partial failure.
+   */
+  async deploy(files: Array<{ path: string; content: string }>): Promise<{ id: string; url: string }> {
+    if (!files.length) {
+      throw new Error("Seed cannot create a Vercel preview without project files.");
+    }
+
+    const deploymentFiles: Array<{ file: string; sha: string; size: number }> = [];
+    const uploadedDigests = new Set<string>();
+    for (const file of files) {
+      const sha = createHash("sha1").update(file.content).digest("hex");
+      const size = Buffer.byteLength(file.content);
+      if (!uploadedDigests.has(sha)) {
+        await this.request(`/v2/files${this.qs()}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/octet-stream",
+            "Content-Length": String(size),
+            "x-vercel-digest": sha,
+          },
+          body: file.content,
+        });
+        uploadedDigests.add(sha);
+      }
+      deploymentFiles.push({ file: file.path, sha, size });
+    }
+
     const result = await this.request<{ id: string; url: string; meta?: { githubCommitSha?: string } }>(
       `/v13/deployments${this.qs()}`,
       {
@@ -166,6 +195,8 @@ export class VercelDeploymentProvider implements DeploymentProvider {
         body: JSON.stringify({
           name: this.resolvedProject?.name ?? this.projectIdentifier,
           project: this.targetProjectId(),
+          files: deploymentFiles,
+          projectSettings: { framework: "nextjs" },
         }),
       },
     );
@@ -178,7 +209,10 @@ export class VercelDeploymentProvider implements DeploymentProvider {
     );
     const map: Record<string, "queued" | "building" | "ready" | "error"> = {
       QUEUED: "queued",
+      INITIALIZING: "building",
+      ANALYZING: "building",
       BUILDING: "building",
+      DEPLOYING: "building",
       READY: "ready",
       ERROR: "error",
       CANCELED: "error",

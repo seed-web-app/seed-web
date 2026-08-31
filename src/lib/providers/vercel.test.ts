@@ -68,6 +68,9 @@ describe("VercelDeploymentProvider project identity", () => {
             accountId: "team_exact",
           });
         }
+        if (url.includes("/v2/files") && init?.method === "POST") {
+          return new Response("{}", { status: 200 });
+        }
         if (url.includes("/v13/deployments") && init?.method === "POST") {
           return Response.json({ id: "dpl_preview", url: "preview.example.vercel.app" });
         }
@@ -77,17 +80,32 @@ describe("VercelDeploymentProvider project identity", () => {
 
     const provider = new VercelDeploymentProvider("secret", "prj_exact", "team_exact");
     await provider.requireProject("prj_exact", "team_exact");
-    await expect(provider.deploy()).resolves.toEqual({
+    await expect(provider.deploy([{ path: "app/page.tsx", content: "export default null;" }])).resolves.toEqual({
       id: "dpl_preview",
       url: "https://preview.example.vercel.app",
     });
 
     expect(calls.map(({ url, init }) => `${init?.method ?? "GET"} ${url}`)).toEqual([
       "GET https://api.vercel.com/v9/projects/prj_exact?teamId=team_exact",
+      "POST https://api.vercel.com/v2/files?teamId=team_exact",
       "POST https://api.vercel.com/v13/deployments?teamId=team_exact",
     ]);
-    const deploymentBody = JSON.parse(String(calls[1]?.init?.body)) as Record<string, unknown>;
-    expect(deploymentBody).toEqual({ name: "friendly-name", project: "prj_exact" });
+    const deploymentBody = JSON.parse(String(calls[2]?.init?.body)) as Record<string, unknown>;
+    expect(deploymentBody).toMatchObject({
+      name: "friendly-name",
+      project: "prj_exact",
+      files: [{ file: "app/page.tsx", size: 20 }],
+      projectSettings: { framework: "nextjs" },
+    });
     expect(deploymentBody).not.toHaveProperty("target");
   });
+
+  it.each(["INITIALIZING", "ANALYZING", "BUILDING", "DEPLOYING"])(
+    "treats the Vercel %s state as an in-progress build",
+    async (readyState) => {
+      vi.stubGlobal("fetch", vi.fn(async () => Response.json({ readyState })));
+      const provider = new VercelDeploymentProvider("secret", "prj_exact", "team_exact");
+      await expect(provider.getDeploymentStatus("dpl_exact")).resolves.toBe("building");
+    },
+  );
 });

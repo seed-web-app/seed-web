@@ -762,7 +762,53 @@ export async function executeSeedRun(ctx: ExecutorContext): Promise<void> {
         vercelAccountId || authorizedTeamId || undefined,
       );
 
-      const deployment = await vercel.deploy();
+      let deployment: { id: string; url: string } | null = null;
+      if (vercelDeploymentId) {
+        const existingStatus = await vercel.getDeploymentStatus(vercelDeploymentId);
+        if (existingStatus !== "error") {
+          deployment = { id: vercelDeploymentId, url: previewUrl };
+        }
+      }
+
+      if (!deployment) {
+        if (!gitHubOwner || !repoName) {
+          throw new Error("Seed has no stored GitHub repository identity for preview deployment.");
+        }
+        if (!gitHubToken) {
+          const encryptedGhCreds = await getProviderCredentials(admin, ctx.workspaceId, "github");
+          const ghCreds = JSON.parse(decryptCredential(encryptedGhCreds)) as GitHubCreds;
+          const appId = process.env.GITHUB_APP_ID;
+          const privateKey = process.env.GITHUB_APP_PRIVATE_KEY;
+          if (!appId || !privateKey) {
+            throw new Error("Seed cannot read the project files because GitHub is not configured.");
+          }
+          gitHubToken = await generateInstallationToken(appId, privateKey, ghCreds.installationId);
+          gitHubOwner = ghCreds.accountLogin;
+        }
+
+        const github = new GitHubSourceProvider(gitHubToken, gitHubOwner, repoName);
+        const repositoryState = await github.getRepositoryState();
+        commitSha = repositoryState.commitSha;
+        const deploymentFiles = await github.readFiles(
+          repositoryState.files.map((file) => file.path),
+        );
+        deployment = await vercel.deploy(deploymentFiles);
+        vercelDeploymentId = deployment.id;
+
+        // Persist immediately so a process restart follows this deployment instead of duplicating it.
+        await upsertResource(admin, ctx.projectId, "vercel", vercelProjectId, {
+          projectName: vercelProjectName,
+          vercelProjectId,
+          accountId: vercelAccountId,
+          teamId: authorizedTeamId || null,
+          integrationInstallationId:
+            vercelInstallationId || vcCreds.installation_id || null,
+          authorizedUserId: vercelAuthorizedUserId || vcCreds.user_id || null,
+          deploymentId: vercelDeploymentId,
+          previewUrl: "",
+          productionUrl: "",
+        });
+      }
       vercelDeploymentId = deployment.id;
 
       const result = await vercel.waitForDeployment(deployment.id);
