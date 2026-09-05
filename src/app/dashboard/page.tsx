@@ -1,5 +1,5 @@
 import { getSeedIdentity } from "@/lib/supabase/server";
-import { SeedDashboard } from "@/components/seed-dashboard";
+import { SeedBuilderWorkspace } from "@/components/seed-builder-workspace";
 import { getDashboardContext } from "@/lib/dashboard-context";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
@@ -39,5 +39,5 @@ export default async function DashboardPage({
 
   if (!context.projectId) redirect(rootUrl("/onboarding"));
 
-  return <SeedDashboard identity={identity} context={context} />;
+  return <SeedBuilderWorkspace identity={identity} context={context} />;
 }

@@ -1,0 +1,24 @@
+{
+  "name": "yoga-studio",
+  "version": "1.0.0",
+  "requires": ["website-design", "business-website"],
+  "designTokens": {
+    "background": "#f6f3eb",
+    "ink": "#253e35",
+    "muted": "#52635a",
+    "sage": "#dce4d6",
+    "clay": "#a65d45",
+    "headingFont": "Georgia, 'Times New Roman', serif",
+    "bodyFont": "Arial, Helvetica, sans-serif"
+  },
+  "instructions": [
+    "Create a calm, welcoming yoga studio website with the finish of an independent wellness brand. Default direction: warm ivory, deep forest green, muted sage, a clay accent, editorial serif headings, clean sans-serif body text, and spacious asymmetric layouts. Follow the user's own palette or typography when specified.",
+    "Use a short human hero headline, one useful supporting sentence, a primary Request a class action, and a secondary Explore the practice action. Use a large portrait-format image or original botanical artwork with breathing room.",
+    "Explain the practice, help first-time visitors prepare, and connect class discovery to the existing booking form. Only show teachers, certifications, prices, class durations, locations, and schedules supplied by the owner or stored in the project database.",
+    "Treat a preferred date/time submission as a booking request until confirmed. Never imply instant reservations, available spaces, email automation, or payments unless those capabilities actually exist.",
+    "Use inclusive, beginner-friendly language. Avoid spiritual stereotypes, body-transformation promises, medical claims, or invented teaching qualifications.",
+    "For yoga edits, load existing project memory and code, keep its brand, and change only the requested section. A copy edit must not replace the whole page or rebuild the booking database.",
+    "On narrow screens, stack the hero text and artwork, keep the main action visible, use generous form controls, and retain navigation access. Keep booking and admin behavior working."
+  ],
+  "checks": ["yoga_specific_content", "honest_booking_status", "no_fabricated_offerings", "existing_booking_flow_preserved"]
+}

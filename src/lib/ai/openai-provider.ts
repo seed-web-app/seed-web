@@ -3,10 +3,11 @@ import OpenAI from "openai";
 import { zodTextFormat } from "openai/helpers/zod";
 import { z } from "zod";
 import type { AIProvider, SeedPlan } from "@/lib/providers/contracts";
+import { skillNames, skillInstructions } from "@/lib/skills/catalog";
 
 export const generatedPlanSchema = z.object({
   summary: z.string().min(1).max(600),
-  skills: z.array(z.enum(["base-app", "business-website", "lead-form", "booking", "admin-panel", "auth", "database", "media"])).min(1),
+  skills: z.array(z.enum(skillNames)).min(1),
   steps: z.array(z.object({ title: z.string().min(1).max(140), kind: z.enum(["inspect", "generate", "validate", "deploy"]) })).min(4).max(14),
 });
 
@@ -17,7 +18,7 @@ export class OpenAISeedProvider implements AIProvider {
     const response = await this.client.responses.parse({
       model: this.model,
       store: false,
-      instructions: "You are Seed's planner for simple business, lead, and booking websites. Produce a small safe plan. Always inspect current repository, database, and deployment state first. Never include credentials, SQL, code, or provider tokens. Never propose destructive database changes. End with validation, preview, and production deployment steps.",
+      instructions: "You are Seed's planner for simple business, lead, and booking websites. Produce a small safe plan using the selected skills. Always inspect current repository, database, and deployment state first. Never include credentials, SQL, code, or provider tokens. Never propose destructive database changes. End with validation, preview, and production deployment only after explicit approval.\n\n" + skillInstructions(input.skills),
       input: `User request: ${input.request}\nAllowed skills: ${input.skills.join(", ")}`,
       text: { format: zodTextFormat(generatedPlanSchema, "seed_plan") },
     });

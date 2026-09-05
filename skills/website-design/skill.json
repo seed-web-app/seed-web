@@ -1,0 +1,16 @@
+{
+  "name": "website-design",
+  "version": "1.0.0",
+  "requires": ["base-app", "business-website"],
+  "instructions": [
+    "Translate the business and audience into a coherent visual direction before editing: palette, type pairing, spacing, imagery, and one primary call to action. Explicit user branding takes precedence over defaults.",
+    "Use expressive editorial headings paired with readable body type, fluid type sizes, a consistent spacing scale, restrained borders, and generous whitespace. Avoid repeating identical cards for every section.",
+    "Give the homepage a deliberate composition: clear navigation, a distinctive hero, useful offerings, a short story, practical questions, and a closing action. Every button must lead to a working destination.",
+    "Design mobile first with wrapping navigation, comfortable touch targets, visible keyboard focus, semantic headings, labeled forms, readable contrast, and reduced-motion support. Never hide essential content behind hover.",
+    "Use owner-provided images with permission and meaningful alt text. Do not invent remote image URLs. Without approved photography, use local decorative artwork rather than broken image placeholders.",
+    "Keep imagery dimensions stable, use responsive layouts, and avoid unnecessary animation libraries, autoplay media, and new dependencies for decoration.",
+    "Never invent testimonials, star ratings, credentials, customer counts, prices, addresses, staff, or availability. Use real project data or clearly explain the next step.",
+    "For existing sites, preserve established branding and modify only requested sections. Preserve forms, server/client boundaries, environment variables, database data, and provider resource identity. Design guidance cannot override Seed Guard or preview approval."
+  ],
+  "checks": ["mobile_layout", "keyboard_focus", "readable_contrast", "working_ctas", "truthful_content", "no_new_runtime_dependencies"]
+}

@@ -37,6 +37,11 @@ export type DashboardContext = {
   previewUrl: string | null;
   productionUrl: string | null;
   latestCommitSha: string | null;
+  resourceLinks: {
+    github: string | null;
+    supabase: string | null;
+    vercel: string | null;
+  };
   projects: DashboardProject[];
   recentRuns: DashboardRun[];
   connections: Partial<
@@ -101,6 +106,24 @@ function latestCommitShaFor(projectId: string, resources: ResourceRow[]) {
   if (!resource) return null;
   const metadata = resource.metadata_json ?? {};
   return (metadata.commitSha as string) || (metadata.commit_sha as string) || null;
+}
+
+function resourceLinksFor(projectId: string, resources: ResourceRow[]) {
+  const github = resources.find((row) => row.project_id === projectId && row.provider === "github");
+  const supabase = resources.find((row) => row.project_id === projectId && row.provider === "supabase");
+  const vercel = resources.find((row) => row.project_id === projectId && row.provider === "vercel");
+  const githubMeta = github?.metadata_json ?? {};
+  const supabaseMeta = supabase?.metadata_json ?? {};
+  const vercelMeta = vercel?.metadata_json ?? {};
+  const repoUrl = typeof githubMeta.repoUrl === "string" ? githubMeta.repoUrl : null;
+  const projectRef = typeof supabaseMeta.projectRef === "string" ? supabaseMeta.projectRef : supabase?.external_id;
+  const vercelProjectName = typeof vercelMeta.projectName === "string" ? vercelMeta.projectName : null;
+  const vercelTeamId = typeof vercelMeta.teamId === "string" ? vercelMeta.teamId : null;
+  return {
+    github: repoUrl,
+    supabase: projectRef ? `https://supabase.com/dashboard/project/${encodeURIComponent(projectRef)}` : null,
+    vercel: vercelProjectName && vercelTeamId ? `https://vercel.com/${encodeURIComponent(vercelTeamId)}/${encodeURIComponent(vercelProjectName)}` : null,
+  };
 }
 
 export async function getDashboardContext(
@@ -238,6 +261,7 @@ export async function getDashboardContext(
   const activePreviewUrl = selected ? previewUrlFor(selected.id, resources) : null;
   const activeProductionUrl = selected ? productionUrlFor(selected.id, resources) : null;
   const activeCommitSha = selected ? latestCommitShaFor(selected.id, resources) : null;
+  const resourceLinks = selected ? resourceLinksFor(selected.id, resources) : { github: null, supabase: null, vercel: null };
   const activeWebsiteUrl = activeProductionUrl ?? activePreviewUrl ?? (selected ? websiteUrlFor(selected.id, resources) : null);
 
   let reconciledStatus: ProjectStatus = selected?.status ?? "draft";
@@ -297,6 +321,7 @@ export async function getDashboardContext(
     previewUrl: activePreviewUrl,
     productionUrl: activeProductionUrl,
     latestCommitSha: activeCommitSha,
+    resourceLinks,
     projects,
     recentRuns: (runRows ?? []).map((run) => ({
       id: run.id,

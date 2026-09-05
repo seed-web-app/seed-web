@@ -5,6 +5,7 @@ import { getProjectMemory } from "@/lib/project-memory";
 import { resolveProjectState } from "@/lib/project-state";
 import { decryptCredential } from "@/lib/security/crypto";
 import OpenAI from "openai";
+import { skillInstructions, skillsForRequest } from "@/lib/skills/catalog";
 
 const chatSchema = z.object({
   projectId: z.string().uuid(),
@@ -23,6 +24,13 @@ export async function GET(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
+  const { data: ownedProject } = await supabase
+    .from("projects")
+    .select("id,workspace_id")
+    .eq("id", projectId)
+    .maybeSingle();
+  if (!ownedProject) return NextResponse.json({ message: "Project not found" }, { status: 404 });
+
   // Get or create conversation
   let { data: conversation } = await admin
     .from("project_conversations")
@@ -31,12 +39,9 @@ export async function GET(request: Request) {
     .maybeSingle();
 
   if (!conversation) {
-    const { data: project } = await admin.from("projects").select("workspace_id").eq("id", projectId).single();
-    if (!project) return NextResponse.json({ message: "Project not found" }, { status: 404 });
-
     const { data: created } = await admin
       .from("project_conversations")
-      .insert({ project_id: projectId, workspace_id: project.workspace_id })
+      .insert({ project_id: projectId, workspace_id: ownedProject.workspace_id })
       .select("id")
       .single();
     conversation = created;
@@ -68,7 +73,7 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
-  const { data: project } = await admin
+  const { data: project } = await supabase
     .from("projects")
     .select("id,name,slug,workspace_id")
     .eq("id", projectId)
@@ -161,7 +166,7 @@ GUIDELINES:
         const completion = await client.chat.completions.create({
           model: "gpt-4o-mini",
           messages: [
-            { role: "system", content: systemPrompt },
+            { role: "system", content: systemPrompt + "\n\n" + skillInstructions(skillsForRequest(message, `${project.name}\n${memory.businessType}\n${memory.summary}`)) },
             ...formattedHistory,
           ],
         });

@@ -7,18 +7,23 @@ import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/sup
 import { decryptCredential } from "@/lib/security/crypto";
 import { randomUUID } from "crypto";
 import { seedLog } from "@/lib/logger";
+import { skillsForRequest } from "@/lib/skills/catalog";
+import type { SeedPlan } from "@/lib/providers/contracts";
 const planRequestSchema=seedRequestSchema.extend({projectId:z.string().uuid().optional()});
-function skillsFor(request: string) { const lower = request.toLowerCase(); return ["base-app", ...(lower.includes("booking") || lower.includes("book ") ? ["booking", "admin-panel", "database"] : lower.includes("lead") || lower.includes("contact") ? ["business-website", "lead-form"] : ["business-website"])]; }
+const skillsFor = skillsForRequest;
 export async function POST(request: Request) {
   const parsed=planRequestSchema.safeParse(await request.json());if(!parsed.success)return NextResponse.json({message:"Please describe what you would like Seed to build."},{status:400});
   const guard=validateProposal({request:parsed.data.request});if(!guard.passed)return NextResponse.json({message:"Seed paused this request because it needs a safety review."},{status:422});
-  const skills=skillsFor(parsed.data.request);let plan={summary:`Safely update the project using ${skills.slice(1).join(", ")||"the business website"} skill.`,skills,steps:[{title:"Read the latest code, database, and hosting state",kind:"inspect" as const},{title:"Compare it with Seed's last snapshot",kind:"inspect" as const},{title:"Prepare the smallest safe change",kind:"generate" as const},{title:"Run Seed Guard, type checks, build, and tests",kind:"validate" as const},{title:"Create a private preview for approval",kind:"deploy" as const}]};
+  const skills=skillsFor(parsed.data.request);let plan:SeedPlan={summary:`Safely update the project using ${skills.slice(1).join(", ")||"the business website"} skill.`,skills,steps:[{title:"Read the latest code, database, and hosting state",kind:"inspect" as const},{title:"Compare it with Seed's last snapshot",kind:"inspect" as const},{title:"Prepare the smallest safe change",kind:"generate" as const},{title:"Run Seed Guard, type checks, build, and tests",kind:"validate" as const},{title:"Create a private preview for approval",kind:"deploy" as const}]};
   let apiKey=seedConfig.demoMode?process.env.OPENAI_API_KEY:undefined;let liveContext:{admin:NonNullable<ReturnType<typeof createSupabaseAdminClient>>;profileId:string;workspaceId:string;projectId:string}|null=null;
   if(!seedConfig.demoMode){
     if(!parsed.data.projectId)return NextResponse.json({message:"Select a project before asking Seed."},{status:400});
     const supabase=await createSupabaseServerClient();const admin=createSupabaseAdminClient();if(!supabase||!admin)return NextResponse.json({message:"Seed's production services are not configured."},{status:503});
     const{data:{user}}=await supabase.auth.getUser();if(!user)return NextResponse.json({message:"Sign in again to continue."},{status:401});
-    const{data:project}=await supabase.from("projects").select("id,workspace_id").eq("id",parsed.data.projectId).maybeSingle();if(!project)return NextResponse.json({message:"You do not have access to this project."},{status:403});
+    const{data:project}=await supabase.from("projects").select("id,workspace_id,name").eq("id",parsed.data.projectId).maybeSingle();if(!project)return NextResponse.json({message:"You do not have access to this project."},{status:403});
+    const { data: memory } = await admin.from("project_memory").select("business_type,summary").eq("project_id",project.id).eq("workspace_id",project.workspace_id).maybeSingle();
+    skills.splice(0, skills.length, ...skillsForRequest(parsed.data.request, `${project.name}\n${memory?.business_type ?? ""}\n${memory?.summary ?? ""}`));
+    plan.summary = `Prepare a safe change using ${skills.slice(1).join(", ")}.`;
     const{data:profile}=await admin.from("profiles").select("id").eq("auth_user_id",user.id).maybeSingle();if(!profile)return NextResponse.json({message:"Seed profile not found."},{status:409});liveContext={admin,profileId:profile.id,workspaceId:project.workspace_id,projectId:project.id};
     const{data:connection}=await admin.from("provider_connections").select("encrypted_access_data,status").eq("workspace_id",project.workspace_id).eq("provider","openai").eq("status","connected").maybeSingle();
     if(connection){try{apiKey=(JSON.parse(decryptCredential(connection.encrypted_access_data))as{apiKey?:string}).apiKey;}catch{return NextResponse.json({message:"Seed AI needs to be reconnected."},{status:409});}}

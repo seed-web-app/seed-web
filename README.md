@@ -40,6 +40,16 @@ Open `http://localhost:3000`. Use `/login`, `/onboarding`, or `/dashboard` direc
 
 Never expose service-role keys, OAuth secrets, provider tokens, GitHub private keys, or OpenAI keys through a `NEXT_PUBLIC_*` variable.
 
+## Website design skills
+
+Seed selects `website-design` for website requests and adds `yoga-studio` when the request or project context describes yoga (including Hindi yoga requests). The versioned definitions live in `skills/website-design/skill.json` and `skills/yoga-studio/skill.json`. They are statically bundled, passed to AI planning and incremental editing, and recorded in generation audits.
+
+New yoga builds use the existing booking app with a yoga presentation layer: forest/ivory/sage design tokens, editorial typography, local botanical artwork, responsive pages, real class listings from the project's `services` table, and a class-request form. No new provider connections, environment variables, or migrations are required. The artwork is decorative; the template does not invent studio photos, teachers, reviews, prices, or schedules.
+
+Try: `Create a polished yoga studio booking website called Prana Studio.` Existing yoga projects can use requests such as `Make the hero calmer with more whitespace, keeping my current green branding.` AI edits receive the design guidance and existing code; an unavailable AI connection fails the edit instead of inserting the raw request into the homepage.
+
+The bundled new-site template uses the default yoga palette. Custom brand directions and photography are applied through subsequent AI edits with owner-supplied content. Existing sites are not automatically restyled when skills are added.
+
 ## Verify
 
 ```bash

@@ -1,4 +1,6 @@
 import "server-only";
+import { isYogaProject } from "@/lib/skills/catalog";
+import { applyYogaDesign } from "@/lib/engine/yoga-app-design";
 
 export type GeneratedFile = { path: string; content: string };
 
@@ -8,6 +10,7 @@ export interface BookingAppConfig {
   supabaseUrl: string;
   supabasePublishableKey: string;
   adminSecret: string; // server-side only — goes into Vercel env, not committed
+  request?: string;
 }
 
 /**
@@ -17,6 +20,13 @@ export interface BookingAppConfig {
  * they are configured as Vercel environment variables separately.
  */
 export function generateBookingApp(config: BookingAppConfig): GeneratedFile[] {
+  const files = generateBaseBookingApp(config);
+  return isYogaProject(`${config.projectName}\n${config.request ?? ""}`)
+    ? applyYogaDesign(files, config.projectName)
+    : files;
+}
+
+function generateBaseBookingApp(config: BookingAppConfig): GeneratedFile[] {
   const { projectName } = config;
 
   return [
