@@ -28,19 +28,24 @@ export async function proxy(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
-  const isPublicRoute =
-    pathname === "/" ||
-    pathname === "/login" ||
-    pathname.startsWith("/auth/callback");
+  // Admin route protection: requires verified admin profile
+  if (pathname.startsWith("/admin")) {
+    if (!user) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
 
-  // Require Google authentication for any non-public route
-  if (!user && !isPublicRoute) {
-    const redirectUrl = new URL("/login", request.url);
-    return NextResponse.redirect(redirectUrl);
+    if (profile?.role !== "admin") {
+      return NextResponse.redirect(new URL("/home", request.url));
+    }
   }
 
-  // If user is already logged in and visits landing or login
-  if (user && (pathname === "/" || pathname === "/login")) {
+  // If already logged in as admin and visits login, redirect to admin
+  if (user && pathname === "/login") {
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
@@ -53,19 +58,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/home", request.url));
   }
 
-  // Admin route protection
-  if (user && pathname.startsWith("/admin")) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (profile?.role !== "admin") {
-      return NextResponse.redirect(new URL("/home", request.url));
-    }
-  }
-
+  // All catalog, news, forum, parts, and home routes are public to browse
   return response;
 }
 

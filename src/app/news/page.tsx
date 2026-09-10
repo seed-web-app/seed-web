@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { getCurrentProfile, getUserVehicles, createSupabaseServerClient } from "@/lib/supabase/server";
 import { CustomerNavbar } from "@/components/customer/Navbar";
 import { NewsArticleModal } from "@/components/customer/NewsArticleModal";
@@ -9,11 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function NewsFeedPage() {
   const profile = await getCurrentProfile();
-  if (!profile) {
-    redirect("/login");
-  }
-
-  const vehicles = await getUserVehicles(profile.id);
+  const vehicles = profile ? await getUserVehicles(profile.id) : [];
   const supabase = await createSupabaseServerClient();
 
   const { data: rawNews } = supabase

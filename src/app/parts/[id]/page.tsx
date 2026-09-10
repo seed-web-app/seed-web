@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getCurrentProfile, getUserVehicles, createSupabaseServerClient } from "@/lib/supabase/server";
 import { CustomerNavbar } from "@/components/customer/Navbar";
@@ -17,6 +17,7 @@ import {
   ChevronRight,
   Car,
   Lock,
+  Phone,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -34,19 +35,15 @@ export default async function PartDetailPage({
   searchParams,
 }: PartDetailPageProps) {
   const profile = await getCurrentProfile();
-  if (!profile) {
-    redirect("/login");
-  }
-
-  const { id } = await params;
-  const { requested, error } = await searchParams;
-
-  const vehicles = await getUserVehicles(profile.id);
+  const vehicles = profile ? await getUserVehicles(profile.id) : [];
   const supabase = await createSupabaseServerClient();
 
   if (!supabase) {
     notFound();
   }
+
+  const { id } = await params;
+  const { requested, error } = await searchParams;
 
   const { data: partData, error: partError } = await supabase
     .from("parts")
@@ -69,10 +66,12 @@ export default async function PartDetailPage({
     .limit(8);
   const relatedParts = (rawRelated as Part[]) || [];
 
-  const { count: inquiryCount } = await supabase
-    .from("inquiries")
-    .select("id", { count: "exact", head: true })
-    .eq("customer_id", profile.id);
+  const { count: inquiryCount } = (supabase && profile)
+    ? await supabase
+        .from("inquiries")
+        .select("id", { count: "exact", head: true })
+        .eq("customer_id", profile.id)
+    : { count: 0 };
 
   return (
     <div className="min-h-screen bg-[#eaeded] flex flex-col font-sans selection:bg-[#ffd814] selection:text-black">
@@ -112,7 +111,7 @@ export default async function PartDetailPage({
               <p className="text-[#0f1111] mt-1 leading-relaxed">
                 Thank you! Our Suzuki parts team in Phoenix & Port Louis has received your enquiry for{" "}
                 <strong>{part.name}</strong>. We will contact you via WhatsApp or phone at{" "}
-                <span className="font-bold">{profile.phone || "your registered number"}</span> to verify chassis fitment and provide a finalized quote.
+                <span className="font-bold">{profile?.phone || "your registered number"}</span> to verify chassis fitment and provide a finalized quote.
               </p>
               <Link
                 href="/profile#inquiries"
@@ -274,63 +273,89 @@ export default async function PartDetailPage({
                 )}
               </div>
 
-              {/* Lead Inquiry Form */}
-              <form action={submitPartInquiry} className="space-y-3 pt-2 border-t border-[#e7e7e7]">
-                <input type="hidden" name="part_id" value={part.id} />
+              {/* Lead Inquiry Form or Guest Sign In */}
+              {profile ? (
+                <form action={submitPartInquiry} className="space-y-3 pt-2 border-t border-[#e7e7e7]">
+                  <input type="hidden" name="part_id" value={part.id} />
 
-                <div>
-                  <label className="block text-[11px] font-bold text-[#0f1111] mb-1">
-                    Select Your Registered Vehicle:
-                  </label>
-                  {vehicles.length > 0 ? (
-                    <select
-                      name="vehicle_id"
-                      defaultValue={vehicles[0].id}
-                      className="w-full text-xs p-2 rounded border border-[#888c8c] bg-white focus:ring-1 focus:ring-[#e77600]"
-                    >
-                      {vehicles.map((v) => (
-                        <option key={v.id} value={v.id}>
-                          {v.year} {v.make} {v.model}
-                        </option>
-                      ))}
-                      <option value="none">Other Suzuki Model</option>
-                    </select>
-                  ) : (
-                    <p className="text-[11px] text-[#565959]">
-                      No vehicle registered in garage yet.{" "}
-                      <Link href="/profile" className="text-[#007185] underline">
-                        Add one now
-                      </Link>
-                    </p>
-                  )}
+                  <div>
+                    <label className="block text-[11px] font-bold text-[#0f1111] mb-1">
+                      Select Your Registered Vehicle:
+                    </label>
+                    {vehicles.length > 0 ? (
+                      <select
+                        name="vehicle_id"
+                        defaultValue={vehicles[0].id}
+                        className="w-full text-xs p-2 rounded border border-[#888c8c] bg-white focus:ring-1 focus:ring-[#e77600]"
+                      >
+                        {vehicles.map((v) => (
+                          <option key={v.id} value={v.id}>
+                            {v.year} {v.make} {v.model}
+                          </option>
+                        ))}
+                        <option value="none">Other Suzuki Model</option>
+                      </select>
+                    ) : (
+                      <p className="text-[11px] text-[#565959]">
+                        No vehicle registered in garage yet.{" "}
+                        <Link href="/profile" className="text-[#007185] underline">
+                          Add one now
+                        </Link>
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-[#0f1111] mb-1">
+                      Questions / Chassis Notes:
+                    </label>
+                    <textarea
+                      name="message"
+                      rows={2}
+                      placeholder="e.g. Please verify fitment for my chassis number or confirm primer condition"
+                      className="w-full text-xs p-2 rounded border border-[#888c8c] bg-white focus:ring-1 focus:ring-[#e77600] resize-none"
+                    />
+                  </div>
+
+                  {/* Golden Amazon Enquire Button */}
+                  <button
+                    type="submit"
+                    disabled={part.status === "sold"}
+                    className={`w-full py-2.5 px-4 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm hover:shadow transition-all ${
+                      part.status === "sold"
+                        ? "bg-[#e7e7e7] text-[#565959] cursor-not-allowed"
+                        : "btn-amazon-primary text-[#0f1111]"
+                    }`}
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Enquire This Part</span>
+                  </button>
+                </form>
+              ) : (
+                <div className="pt-3 border-t border-[#e7e7e7] space-y-2.5 text-xs">
+                  <p className="text-[#565959] text-[11px] leading-relaxed">
+                    Sign in with your Google account to submit an inquiry and receive a verified dealership quotation.
+                  </p>
+                  <Link
+                    href="/login"
+                    className="w-full py-2.5 px-4 rounded-full btn-amazon-primary text-xs font-bold text-[#0f1111] flex items-center justify-center gap-1.5 shadow-xs"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Sign In to Enquire Part</span>
+                  </Link>
+                  <a
+                    href={`https://wa.me/2305550199?text=${encodeURIComponent(
+                      `Hello Suzuki Mauritius, inquiring about ${part.name} (OEM #${part.part_number || "OEM"})`
+                    )}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-full py-2 px-4 rounded-full bg-white border border-[#d5d9d9] hover:bg-[#f3f3f3] text-[11px] font-semibold text-[#0f1111] flex items-center justify-center gap-1.5"
+                  >
+                    <Phone className="w-3.5 h-3.5 text-[#2b8a3e]" />
+                    <span>WhatsApp Parts Advisor</span>
+                  </a>
                 </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold text-[#0f1111] mb-1">
-                    Questions / Chassis Notes:
-                  </label>
-                  <textarea
-                    name="message"
-                    rows={2}
-                    placeholder="e.g. Please verify fitment for my chassis number or confirm primer condition"
-                    className="w-full text-xs p-2 rounded border border-[#888c8c] bg-white focus:ring-1 focus:ring-[#e77600] resize-none"
-                  />
-                </div>
-
-                {/* Golden Amazon Enquire Button */}
-                <button
-                  type="submit"
-                  disabled={part.status === "sold"}
-                  className={`w-full py-2.5 px-4 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm hover:shadow transition-all ${
-                    part.status === "sold"
-                      ? "bg-[#e7e7e7] text-[#565959] cursor-not-allowed"
-                      : "btn-amazon-primary text-[#0f1111]"
-                  }`}
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>Enquire This Part</span>
-                </button>
-              </form>
+              )}
 
               {/* Trust badges */}
               <div className="pt-2 border-t border-[#e7e7e7] text-[11px] text-[#565959] space-y-1.5">

@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentProfile, getUserVehicles, createSupabaseServerClient } from "@/lib/supabase/server";
 import { CustomerNavbar } from "@/components/customer/Navbar";
@@ -30,13 +29,9 @@ interface ForumPageProps {
 
 export default async function ForumPage({ searchParams }: ForumPageProps) {
   const profile = await getCurrentProfile();
-  if (!profile) {
-    redirect("/login");
-  }
-
-  const { category, thread: activeThreadId, new_thread, saved, error } = await searchParams;
-  const vehicles = await getUserVehicles(profile.id);
+  const vehicles = profile ? await getUserVehicles(profile.id) : [];
   const supabase = await createSupabaseServerClient();
+  const { category, thread: activeThreadId, new_thread, saved, error } = await searchParams;
 
   let query = supabase
     ? supabase.from("forum_threads").select("*").order("created_at", { ascending: false })
@@ -117,7 +112,7 @@ export default async function ForumPage({ searchParams }: ForumPageProps) {
           </div>
 
           <Link
-            href="/forum?new_thread=true"
+            href={profile ? "/forum?new_thread=true" : "/login"}
             className="inline-flex items-center gap-1.5 py-2.5 px-5 rounded-full btn-amazon-primary text-xs font-semibold cursor-pointer flex-shrink-0"
           >
             <Plus className="w-4 h-4" />
@@ -259,31 +254,45 @@ export default async function ForumPage({ searchParams }: ForumPageProps) {
                 )}
               </div>
 
-              {/* Reply Form */}
-              <form action={createForumReply} className="space-y-3 pt-4 border-t border-[#f0f0f0]">
-                <input type="hidden" name="thread_id" value={activeThread.id} />
-                <div>
-                  <label className="block text-xs font-bold text-[#0f1111] mb-1">
-                    Post your reply (as @{profile.full_name?.replace(/\s+/g, "_") || "SuzukiOwner"}):
-                  </label>
-                  <textarea
-                    name="content"
-                    rows={3}
-                    required
-                    placeholder="Type your response or advice for fellow Mauritian owners..."
-                    className="w-full text-xs p-2.5 rounded border border-[#888c8c] focus:ring-1 focus:ring-[#e77600] resize-none"
-                  />
-                </div>
-                <div className="flex justify-end">
-                  <button
-                    type="submit"
-                    className="py-2 px-5 rounded-full btn-amazon-primary text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+              {/* Reply Form or Sign In */}
+              {profile ? (
+                <form action={createForumReply} className="space-y-3 pt-4 border-t border-[#f0f0f0]">
+                  <input type="hidden" name="thread_id" value={activeThread.id} />
+                  <div>
+                    <label className="block text-xs font-bold text-[#0f1111] mb-1">
+                      Post your reply (as @{profile.full_name?.replace(/\s+/g, "_") || "SuzukiOwner"}):
+                    </label>
+                    <textarea
+                      name="content"
+                      rows={3}
+                      required
+                      placeholder="Type your response or advice for fellow Mauritian owners..."
+                      className="w-full text-xs p-2.5 rounded border border-[#888c8c] focus:ring-1 focus:ring-[#e77600] resize-none"
+                    />
+                  </div>
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      className="py-2 px-5 rounded-full btn-amazon-primary text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      <span>Post Reply</span>
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="pt-4 border-t border-[#f0f0f0] text-center py-4 bg-[#f7fafa] rounded-lg">
+                  <p className="text-xs text-[#565959] mb-2 font-medium">
+                    Sign in with Google to post your reply in this discussion
+                  </p>
+                  <Link
+                    href="/login"
+                    className="px-5 py-2 rounded-full btn-amazon-primary text-xs font-bold text-[#0f1111] inline-block shadow-xs"
                   >
-                    <Send className="w-3.5 h-3.5" />
-                    <span>Post Reply</span>
-                  </button>
+                    Sign In to Reply
+                  </Link>
                 </div>
-              </form>
+              )}
             </div>
           </div>
         )}

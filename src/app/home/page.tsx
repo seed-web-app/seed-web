@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentProfile, getUserVehicles, createSupabaseServerClient } from "@/lib/supabase/server";
 import { CustomerNavbar } from "@/components/customer/Navbar";
@@ -6,7 +5,7 @@ import { HeroSlider } from "@/components/customer/HeroSlider";
 import { CategoryIconsGrid } from "@/components/customer/CategoryIconsGrid";
 import { ProductRail } from "@/components/customer/ProductRail";
 import { DealOfTheDay } from "@/components/customer/DealOfTheDay";
-import { STANDING_CONDITION_DISCLAIMER } from "@/lib/types";
+import { STANDING_CONDITION_DISCLAIMER, PART_CATEGORIES } from "@/lib/types";
 import type { Part, CarModel, NewsArticle, ForumThread } from "@/lib/types";
 import {
   AlertTriangle,
@@ -17,6 +16,7 @@ import {
   Wrench,
   Compass,
   MapPin,
+  Send,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -31,11 +31,7 @@ interface HomeFeedProps {
 
 export default async function HomeFeedPage({ searchParams }: HomeFeedProps) {
   const profile = await getCurrentProfile();
-  if (!profile) {
-    redirect("/login");
-  }
-
-  const vehicles = await getUserVehicles(profile.id);
+  const vehicles = profile ? await getUserVehicles(profile.id) : [];
   const supabase = await createSupabaseServerClient();
 
   const { q, category, model } = await searchParams;
@@ -88,7 +84,7 @@ export default async function HomeFeedPage({ searchParams }: HomeFeedProps) {
   const threads = (rawThreads as ForumThread[]) || [];
 
   // Inquiries count for navbar badge
-  const { count: inquiryCount } = supabase
+  const { count: inquiryCount } = (supabase && profile)
     ? await supabase.from("inquiries").select("id", { count: "exact", head: true }).eq("customer_id", profile.id)
     : { count: 0 };
 
@@ -262,7 +258,7 @@ export default async function HomeFeedPage({ searchParams }: HomeFeedProps) {
               </div>
 
               <Link
-                href="/home"
+                href="#all-parts"
                 className="mt-4 text-xs font-semibold text-[#007185] hover:text-[#c7511f] hover:underline"
               >
                 Browse All 68 Parts Catalog →
@@ -516,7 +512,125 @@ export default async function HomeFeedPage({ searchParams }: HomeFeedProps) {
           viewAllLink="/home?category=Interior+%26+Accessories"
         />
 
-        {/* 6. "Why Buy Genuine Suzuki in Mauritius" Trust Reassurance Section */}
+        {/* 6. Comprehensive All Parts Catalog Section on Dashboard */}
+        <div className="amazon-card bg-white p-5 sm:p-6 rounded-lg border border-[#e7e7e7] space-y-4" id="all-parts">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e7e7e7] pb-4">
+            <div>
+              <h2 className="text-lg sm:text-xl font-black text-[#0f1111] flex items-center gap-2">
+                <span>All Genuine Suzuki Parts ({parts.length} Items Listed)</span>
+              </h2>
+              <p className="text-xs text-[#565959]">
+                Showing authorized dealer parts inventory in Phoenix & Port Louis depots with reference pricing in Mauritian Rupees
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap text-xs">
+              <Link
+                href="/home"
+                className={`px-3 py-1.5 rounded-full font-bold transition-all ${
+                  !category || category === "All"
+                    ? "bg-[#131921] text-white"
+                    : "bg-[#f0f2f2] text-[#0f1111] hover:bg-[#e3e6e6]"
+                }`}
+              >
+                All Categories ({parts.length})
+              </Link>
+              {PART_CATEGORIES.map((cat) => (
+                <Link
+                  key={cat}
+                  href={`/home?category=${encodeURIComponent(cat)}`}
+                  className={`px-3 py-1.5 rounded-full font-medium transition-all ${
+                    category === cat
+                      ? "bg-[#131921] text-white font-bold"
+                      : "bg-[#f0f2f2] text-[#0f1111] hover:bg-[#e3e6e6]"
+                  }`}
+                >
+                  {cat}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Parts Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pt-2">
+            {parts.map((p) => {
+              const isBody = p.category === "Body Panels";
+              return (
+                <div
+                  key={p.id}
+                  className="border border-[#e7e7e7] rounded-lg p-3.5 bg-white hover:shadow-md transition-shadow flex flex-col justify-between"
+                >
+                  <div>
+                    <Link
+                      href={`/parts/${p.id}`}
+                      className="block relative aspect-[4/3] bg-[#f7f7f7] rounded-md overflow-hidden mb-2.5 p-2 flex items-center justify-center group"
+                    >
+                      {p.photos && p.photos[0] ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={p.photos[0]}
+                          alt={p.name}
+                          className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-200"
+                        />
+                      ) : (
+                        <span className="text-xs text-[#565959]">Part Photo</span>
+                      )}
+                      <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-[#131921] text-white text-[9px] font-bold">
+                        {p.category}
+                      </span>
+                    </Link>
+
+                    <Link
+                      href={`/parts/${p.id}`}
+                      className="text-xs font-bold text-[#0f1111] hover:text-[#c7511f] line-clamp-2 leading-snug"
+                    >
+                      {p.name}
+                    </Link>
+
+                    <p className="text-[10px] font-mono text-[#565959] mt-1">
+                      {p.part_number ? `OEM #${p.part_number}` : "OEM Spec Verified"}
+                    </p>
+
+                    {isBody && (
+                      <div className="flex items-center gap-1 text-[10px] text-[#c7511f] bg-[#fff8e7] px-2 py-0.5 rounded mt-1.5 border border-[#fbd88e]">
+                        <AlertTriangle className="w-3 h-3 flex-shrink-0" />
+                        <span className="truncate">Factory gray primer</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pt-3 border-t border-[#f0f0f0] mt-3">
+                    <div className="flex items-baseline gap-1 mb-2">
+                      <span className="text-xs text-[#565959]">Ref:</span>
+                      <span className="text-base font-extrabold text-[#b12704]">
+                        Rs {Number(p.price || 0).toLocaleString()}
+                      </span>
+                      <span className="text-[10px] text-[#565959]">MUR</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <Link
+                        href={`/parts/${p.id}#enquire`}
+                        className="py-1.5 px-2 rounded-full btn-amazon-primary text-[11px] font-bold text-[#0f1111] text-center shadow-xs hover:shadow transition-all flex items-center justify-center gap-1"
+                      >
+                        <Send className="w-3 h-3" />
+                        <span>Enquire</span>
+                      </Link>
+                      <Link
+                        href={`/parts/${p.id}`}
+                        className="py-1.5 px-2 rounded-full bg-[#f0f2f2] hover:bg-[#e3e6e6] border border-[#d5d9d9] text-[11px] font-semibold text-[#0f1111] text-center transition-all"
+                      >
+                        Details
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 7. "Why Buy Genuine Suzuki in Mauritius" Trust Reassurance Section */}
         <div className="amazon-card bg-white p-6 sm:p-8 rounded-lg border border-[#e7e7e7] space-y-5">
           <div className="text-center max-w-2xl mx-auto space-y-1">
             <span className="text-xs font-bold text-[#b12704] uppercase tracking-wider">
@@ -573,7 +687,7 @@ export default async function HomeFeedPage({ searchParams }: HomeFeedProps) {
           </div>
         </div>
 
-        {/* Explore Suzuki Mauritius Vehicle Lineup Carousel */}
+        {/* 8. Explore Suzuki Mauritius Vehicle Lineup Carousel */}
         {cars.length > 0 && (
           <div className="amazon-card bg-white p-5 rounded-lg border border-[#e7e7e7]">
             <div className="flex items-center justify-between mb-4">

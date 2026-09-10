@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentProfile, getUserVehicles, createSupabaseServerClient } from "@/lib/supabase/server";
 import { CustomerNavbar } from "@/components/customer/Navbar";
@@ -15,11 +14,7 @@ export const dynamic = "force-dynamic";
 
 export default async function CarsShowcasePage() {
   const profile = await getCurrentProfile();
-  if (!profile) {
-    redirect("/login");
-  }
-
-  const vehicles = await getUserVehicles(profile.id);
+  const vehicles = profile ? await getUserVehicles(profile.id) : [];
   const supabase = await createSupabaseServerClient();
 
   const { data: rawCars } = supabase
