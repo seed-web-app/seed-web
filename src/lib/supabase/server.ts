@@ -37,6 +37,12 @@ export function createSupabaseAdminClient() {
 }
 
 export async function getCurrentUser() {
+  const cookieStore = await cookies();
+  const hasAuthCookie = cookieStore
+    .getAll()
+    .some((c) => c.name.includes("auth-token") || c.name.startsWith("sb-"));
+  if (!hasAuthCookie) return null;
+
   const supabase = await createSupabaseServerClient();
   if (!supabase) return null;
 
@@ -47,6 +53,12 @@ export async function getCurrentUser() {
 }
 
 export async function getCurrentProfile(): Promise<Profile | null> {
+  const cookieStore = await cookies();
+  const hasAuthCookie = cookieStore
+    .getAll()
+    .some((c) => c.name.includes("auth-token") || c.name.startsWith("sb-"));
+  if (!hasAuthCookie) return null;
+
   const supabase = await createSupabaseServerClient();
   if (!supabase) return null;
 

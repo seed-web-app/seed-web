@@ -2,9 +2,19 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function proxy(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+  const hasAuthCookie = request.cookies
+    .getAll()
+    .some((c) => c.name.includes("auth-token") || c.name.startsWith("sb-"));
+
+  // Fast-path: public browsing routes without auth cookies bypass remote Supabase Auth network call
+  if (!hasAuthCookie && !pathname.startsWith("/admin")) {
+    return NextResponse.next({ request });
+  }
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  if (!url || !key) return NextResponse.next();
+  if (!url || !key) return NextResponse.next({ request });
 
   let response = NextResponse.next({ request });
   const supabase = createServerClient(url, key, {
@@ -25,8 +35,6 @@ export async function proxy(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  const pathname = request.nextUrl.pathname;
 
   // Admin route protection: requires verified admin profile
   if (pathname.startsWith("/admin")) {
