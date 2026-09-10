@@ -245,7 +245,7 @@ export default async function ForumPage({ searchParams }: ForumPageProps) {
                     No replies yet. Be the first to share your thoughts!
                   </p>
                 ) : (
-                  <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+                  <div className="space-y-2.5 max-h-96 overflow-y-auto pr-1">
                     {activeReplies.map((r) => (
                       <div key={r.id} className="p-3 rounded-lg bg-white border border-[#e7e7e7] text-xs space-y-1">
                         <div className="flex items-center justify-between text-[11px] text-[#565959]">

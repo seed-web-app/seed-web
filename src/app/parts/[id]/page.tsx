@@ -2,6 +2,8 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentProfile, getUserVehicles, createSupabaseServerClient } from "@/lib/supabase/server";
 import { CustomerNavbar } from "@/components/customer/Navbar";
+import { PartGallery } from "@/components/customer/PartGallery";
+import { ProductRail } from "@/components/customer/ProductRail";
 import { submitPartInquiry } from "./actions";
 import type { Part } from "@/lib/types";
 import { STANDING_CONDITION_DISCLAIMER } from "@/lib/types";
@@ -27,7 +29,10 @@ interface PartDetailPageProps {
   }>;
 }
 
-export default async function PartDetailPage({ params, searchParams }: PartDetailPageProps) {
+export default async function PartDetailPage({
+  params,
+  searchParams,
+}: PartDetailPageProps) {
   const profile = await getCurrentProfile();
   if (!profile) {
     redirect("/login");
@@ -36,30 +41,52 @@ export default async function PartDetailPage({ params, searchParams }: PartDetai
   const { id } = await params;
   const { requested, error } = await searchParams;
 
+  const vehicles = await getUserVehicles(profile.id);
   const supabase = await createSupabaseServerClient();
-  if (!supabase) notFound();
 
-  const { data: rawPart } = await supabase
+  if (!supabase) {
+    notFound();
+  }
+
+  const { data: partData, error: partError } = await supabase
     .from("parts")
     .select("*")
     .eq("id", id)
-    .maybeSingle();
+    .single();
 
-  if (!rawPart) notFound();
+  if (partError || !partData) {
+    notFound();
+  }
 
-  const part = rawPart as Part;
-  const vehicles = await getUserVehicles(profile.id);
-  const murPrice = Math.round(part.price * 46);
+  const part = partData as Part;
+
+  // Fetch related parts in the same category
+  const { data: rawRelated } = await supabase
+    .from("parts")
+    .select("*")
+    .eq("category", part.category)
+    .neq("id", part.id)
+    .limit(8);
+  const relatedParts = (rawRelated as Part[]) || [];
+
+  const { count: inquiryCount } = await supabase
+    .from("inquiries")
+    .select("id", { count: "exact", head: true })
+    .eq("customer_id", profile.id);
 
   return (
-    <div className="min-h-screen bg-[#ffffff] flex flex-col font-sans selection:bg-[#ffd814] selection:text-black">
-      <CustomerNavbar profile={profile} vehicleCount={vehicles.length} />
+    <div className="min-h-screen bg-[#eaeded] flex flex-col font-sans selection:bg-[#ffd814] selection:text-black">
+      <CustomerNavbar
+        profile={profile}
+        vehicleCount={vehicles.length}
+        inquiryCount={inquiryCount || 0}
+      />
 
-      <main className="flex-1 max-w-[1450px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <main className="flex-1 max-w-[1500px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-6">
         {/* Amazon Breadcrumbs */}
-        <nav className="flex items-center gap-1.5 text-xs text-[#565959] mb-4 overflow-x-auto whitespace-nowrap">
+        <nav className="text-xs text-[#565959] flex items-center gap-1.5 flex-wrap">
           <Link href="/home" className="hover:text-[#c7511f] hover:underline">
-            All Parts
+            Home
           </Link>
           <ChevronRight className="w-3 h-3 text-[#999999]" />
           <Link
@@ -69,69 +96,45 @@ export default async function PartDetailPage({ params, searchParams }: PartDetai
             {part.category}
           </Link>
           <ChevronRight className="w-3 h-3 text-[#999999]" />
-          <span className="text-[#0f1111] font-medium truncate max-w-xs">{part.name}</span>
+          <span className="text-[#0f1111] font-semibold truncate max-w-xs">
+            {part.name}
+          </span>
         </nav>
 
-        {/* Success Alert if just enquired */}
-        {requested === "true" && (
-          <div className="mb-6 p-4 rounded-md bg-[#e7f4e4] border border-[#2b8a3e] flex items-start gap-3">
+        {/* Success Feedback Alert */}
+        {requested && (
+          <div className="p-4 rounded-lg bg-[#e7f4e4] border border-[#2b8a3e] flex items-start gap-3 text-xs">
             <CheckCircle2 className="w-5 h-5 text-[#2b8a3e] flex-shrink-0 mt-0.5" />
-            <div className="text-xs">
+            <div>
               <h3 className="text-sm font-bold text-[#2b8a3e]">
                 Inquiry Dispatched to Dealership Parts Desk!
               </h3>
               <p className="text-[#0f1111] mt-1 leading-relaxed">
-                Thank you! Our Suzuki parts team in Phoenix & Port Louis has received your enquiry.
-                We will contact you via WhatsApp or phone at{" "}
-                <span className="font-bold">{profile.phone || "your registered number"}</span> to verify fitment and pricing.
+                Thank you! Our Suzuki parts team in Phoenix & Port Louis has received your enquiry for{" "}
+                <strong>{part.name}</strong>. We will contact you via WhatsApp or phone at{" "}
+                <span className="font-bold">{profile.phone || "your registered number"}</span> to verify chassis fitment and provide a finalized quote.
               </p>
               <Link
-                href="/profile"
+                href="/profile#inquiries"
                 className="mt-2 inline-block font-bold text-[#007185] hover:text-[#c7511f] hover:underline"
               >
-                Track this request in My Inquiries →
+                Track this request in My Inquiries & Transactions →
               </Link>
             </div>
           </div>
         )}
 
         {error && (
-          <div className="mb-6 p-4 rounded-md bg-[#fdf3f2] border border-[#d9381e] text-xs text-[#d9381e]">
+          <div className="p-4 rounded-md bg-[#fdf3f2] border border-[#d9381e] text-xs text-[#d9381e]">
             Could not submit inquiry. Please try again or verify your connection.
           </div>
         )}
 
         {/* Amazon 3-Column Product Detail Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Column 1: Image Gallery (4 cols) */}
-          <div className="lg:col-span-4 space-y-3">
-            <div className="border border-[#e7e7e7] rounded-lg p-4 bg-[#fcfcfc] flex items-center justify-center aspect-[4/3] sticky top-20">
-              {part.photos && part.photos[0] ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={part.photos[0]}
-                  alt={part.name}
-                  className="max-h-full max-w-full object-contain"
-                />
-              ) : (
-                <div className="text-xs text-[#565959]">No photo available</div>
-              )}
-            </div>
-
-            {/* Additional photo thumbnails */}
-            {part.photos && part.photos.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {part.photos.map((photo, i) => (
-                  <div
-                    key={i}
-                    className="w-16 h-16 border border-[#d5d9d9] rounded p-1 hover:border-[#e77600] cursor-pointer bg-white"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={photo} alt="" className="w-full h-full object-contain" />
-                  </div>
-                ))}
-              </div>
-            )}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 bg-white p-6 rounded-lg border border-[#e7e7e7] shadow-xs">
+          {/* Column 1: Interactive Image Gallery (4 cols) */}
+          <div className="lg:col-span-4">
+            <PartGallery photos={part.photos || []} name={part.name} />
           </div>
 
           {/* Column 2: Product Info & Disclaimers (5 cols) */}
@@ -141,13 +144,13 @@ export default async function PartDetailPage({ params, searchParams }: PartDetai
                 href={`/home?category=${encodeURIComponent(part.category)}`}
                 className="text-xs font-semibold text-[#007185] hover:text-[#c7511f] hover:underline"
               >
-                Visit the Official Suzuki Genuine Parts Store
+                Official Suzuki Genuine Parts • Mauritius Depot
               </Link>
               <h1 className="text-xl sm:text-2xl font-bold text-[#0f1111] mt-1 leading-snug">
                 {part.name}
               </h1>
               {part.part_number && (
-                <p className="text-xs font-mono text-[#565959] mt-0.5">
+                <p className="text-xs font-mono text-[#565959] mt-1">
                   OEM Part Code: <span className="font-bold text-[#0f1111]">{part.part_number}</span>
                 </p>
               )}
@@ -155,7 +158,7 @@ export default async function PartDetailPage({ params, searchParams }: PartDetai
 
             {/* Star Rating & Reviews */}
             <div className="flex items-center gap-2 border-b border-[#f0f0f0] pb-3">
-              <div className="flex text-[#de7921]">
+              <div className="flex text-[#ffa41c]">
                 {[...Array(5)].map((_, i) => (
                   <Star key={i} className="w-4 h-4 fill-current" />
                 ))}
@@ -164,19 +167,17 @@ export default async function PartDetailPage({ params, searchParams }: PartDetai
               <span className="text-xs text-[#565959]">| 84 owner reviews in Mauritius</span>
             </div>
 
-            {/* Pricing Section */}
+            {/* Pricing Section in Mauritian Rupees */}
             <div className="border-b border-[#f0f0f0] pb-3 space-y-1">
               <div className="flex items-baseline gap-2">
                 <span className="text-xs text-[#565959]">Reference Price:</span>
-                <span className="text-2xl sm:text-3xl font-bold text-[#0f1111]">
-                  ${Number(part.price).toFixed(2)}
+                <span className="text-2xl sm:text-3xl font-extrabold text-[#b12704]">
+                  Rs {Number(part.price || 0).toLocaleString()}
                 </span>
-                <span className="text-sm font-semibold text-[#0f1111]">
-                  (~Rs {murPrice.toLocaleString()} MUR)
-                </span>
+                <span className="text-xs font-bold text-[#565959]">MUR</span>
               </div>
               <p className="text-[11px] text-[#565959]">
-                All prices are indicative reference quotes. Offline dealer quotes may vary depending on import freight and paint options.
+                Reference dealer quote for Mauritius. No online payment required — offline quote confirmed upon fitment verification.
               </p>
             </div>
 
@@ -184,7 +185,7 @@ export default async function PartDetailPage({ params, searchParams }: PartDetai
             <div className="p-4 rounded-md bg-[#fff8e7] border border-[#fbd88e] text-xs space-y-2">
               <div className="flex items-center gap-2 text-[#b12704] font-bold">
                 <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                <span>Standing Condition & Paint Notice</span>
+                <span>Standing Condition & Factory Primer Notice</span>
               </div>
               <p className="text-[#0f1111] font-medium leading-relaxed">
                 &ldquo;{STANDING_CONDITION_DISCLAIMER}&rdquo;
@@ -210,12 +211,13 @@ export default async function PartDetailPage({ params, searchParams }: PartDetai
               <div className="flex flex-wrap gap-1.5">
                 {part.compatible_models && part.compatible_models.length > 0 ? (
                   part.compatible_models.map((mod) => (
-                    <span
+                    <Link
                       key={mod}
-                      className="px-2.5 py-1 rounded bg-[#f3f3f3] text-xs font-medium text-[#0f1111] border border-[#e7e7e7]"
+                      href={`/cars`}
+                      className="px-2.5 py-1 rounded bg-[#f3f3f3] hover:bg-[#e3e6e6] text-xs font-medium text-[#0f1111] border border-[#e7e7e7] transition-colors"
                     >
                       {mod}
-                    </span>
+                    </Link>
                   ))
                 ) : (
                   <span className="text-xs text-[#565959]">Universal Suzuki Fitment</span>
@@ -239,14 +241,14 @@ export default async function PartDetailPage({ params, searchParams }: PartDetai
 
           {/* Column 3: Amazon Buy / Enquire Box (3 cols) */}
           <div className="lg:col-span-3">
-            <div className="border border-[#d5d9d9] rounded-lg p-5 bg-[#ffffff] shadow-sm space-y-4 sticky top-20">
+            <div className="border border-[#d5d9d9] rounded-lg p-5 bg-[#fafafa] shadow-sm space-y-4 sticky top-20" id="enquire">
               {/* Box Header */}
               <div>
-                <span className="text-2xl font-bold text-[#0f1111]">
-                  ${Number(part.price).toFixed(2)}
+                <span className="text-2xl font-bold text-[#b12704]">
+                  Rs {Number(part.price || 0).toLocaleString()}
                 </span>
                 <span className="text-xs text-[#565959] block">
-                  ~Rs {murPrice.toLocaleString()} MUR Reference
+                  MUR Reference Price
                 </span>
               </div>
 
@@ -256,7 +258,7 @@ export default async function PartDetailPage({ params, searchParams }: PartDetai
                   Dispatched to: <strong className="text-[#007185]">Mauritius 🇲🇺</strong>
                 </p>
                 <div className="flex items-center gap-1 text-[11px] text-[#565959]">
-                  <MapPin className="w-3.5 h-3.5 text-[#565959]" />
+                  <MapPin className="w-3.5 h-3.5 text-[#febd69]" />
                   <span>Phoenix & Port Louis Warehouses</span>
                 </div>
               </div>
@@ -278,13 +280,13 @@ export default async function PartDetailPage({ params, searchParams }: PartDetai
 
                 <div>
                   <label className="block text-[11px] font-bold text-[#0f1111] mb-1">
-                    Select Your Vehicle:
+                    Select Your Registered Vehicle:
                   </label>
                   {vehicles.length > 0 ? (
                     <select
                       name="vehicle_id"
                       defaultValue={vehicles[0].id}
-                      className="w-full text-xs p-2 rounded border border-[#888c8c] bg-[#f0f2f2] focus:ring-1 focus:ring-[#e77600]"
+                      className="w-full text-xs p-2 rounded border border-[#888c8c] bg-white focus:ring-1 focus:ring-[#e77600]"
                     >
                       {vehicles.map((v) => (
                         <option key={v.id} value={v.id}>
@@ -295,7 +297,7 @@ export default async function PartDetailPage({ params, searchParams }: PartDetai
                     </select>
                   ) : (
                     <p className="text-[11px] text-[#565959]">
-                      No vehicle in garage.{" "}
+                      No vehicle registered in garage yet.{" "}
                       <Link href="/profile" className="text-[#007185] underline">
                         Add one now
                       </Link>
@@ -305,13 +307,13 @@ export default async function PartDetailPage({ params, searchParams }: PartDetai
 
                 <div>
                   <label className="block text-[11px] font-bold text-[#0f1111] mb-1">
-                    Questions / Fitting Notes:
+                    Questions / Chassis Notes:
                   </label>
                   <textarea
                     name="message"
                     rows={2}
-                    placeholder="e.g. Can you confirm if this fits my chassis number?"
-                    className="w-full text-xs p-2 rounded border border-[#888c8c] focus:ring-1 focus:ring-[#e77600] resize-none"
+                    placeholder="e.g. Please verify fitment for my chassis number or confirm primer condition"
+                    className="w-full text-xs p-2 rounded border border-[#888c8c] bg-white focus:ring-1 focus:ring-[#e77600] resize-none"
                   />
                 </div>
 
@@ -319,7 +321,7 @@ export default async function PartDetailPage({ params, searchParams }: PartDetai
                 <button
                   type="submit"
                   disabled={part.status === "sold"}
-                  className={`w-full py-2 px-4 rounded-full text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm ${
+                  className={`w-full py-2.5 px-4 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm hover:shadow transition-all ${
                     part.status === "sold"
                       ? "bg-[#e7e7e7] text-[#565959] cursor-not-allowed"
                       : "btn-amazon-primary text-[#0f1111]"
@@ -334,16 +336,26 @@ export default async function PartDetailPage({ params, searchParams }: PartDetai
               <div className="pt-2 border-t border-[#e7e7e7] text-[11px] text-[#565959] space-y-1.5">
                 <div className="flex items-center gap-1.5">
                   <Lock className="w-3.5 h-3.5 text-[#565959]" />
-                  <span>Secure Customer Lead Protection</span>
+                  <span>Secure Dealership Direct Follow-Up</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <ShieldCheck className="w-3.5 h-3.5 text-[#2b8a3e]" />
-                  <span>Authorized Dealer Direct Follow-Up</span>
+                  <span>Verified Suzuki Mauritius Genuine Fitment</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Related Products Rail */}
+        {relatedParts.length > 0 && (
+          <ProductRail
+            title={`Related Genuine ${part.category}`}
+            subtitle="Frequently requested together for Suzuki maintenance and repair"
+            parts={relatedParts}
+            viewAllLink={`/home?category=${encodeURIComponent(part.category)}`}
+          />
+        )}
       </main>
     </div>
   );
