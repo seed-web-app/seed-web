@@ -1,32 +1,44 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient, getAppProfile } from "@/lib/supabase/server";
-import { dashboardUrl, rootUrl } from "@/lib/tenancy";
+import { createSupabaseServerClient, getCurrentProfile } from "@/lib/supabase/server";
 
 export async function GET(request: Request) {
-  const code = new URL(request.url).searchParams.get("code");
-  if (!code) return NextResponse.redirect(rootUrl("/login?error=no_code"));
+  const requestUrl = new URL(request.url);
+  const code = requestUrl.searchParams.get("code");
+  const origin = requestUrl.origin;
+
+  if (!code) {
+    return NextResponse.redirect(`${origin}/login?error=no_code`);
+  }
 
   const supabase = await createSupabaseServerClient();
-  if (!supabase) return NextResponse.redirect(rootUrl("/login?error=auth"));
+  if (!supabase) {
+    return NextResponse.redirect(`${origin}/login?error=auth`);
+  }
 
   const { error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) {
-    return NextResponse.redirect(rootUrl("/login?error=exchange_failed"));
+    return NextResponse.redirect(`${origin}/login?error=exchange_failed`);
   }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.redirect(
-      rootUrl("/login?error=user_verification_failed"),
-    );
+  const profile = await getCurrentProfile();
+  if (!profile) {
+    return NextResponse.redirect(`${origin}/login?error=user_verification_failed`);
   }
 
-  const profile = await getAppProfile();
-  return NextResponse.redirect(
-    profile?.username
-      ? dashboardUrl(profile.username)
-      : rootUrl("/setup/username"),
-  );
+  // Admin always lands in the admin panel
+  if (profile.role === "admin") {
+    return NextResponse.redirect(`${origin}/admin`);
+  }
+
+  // Check if customer has registered their first vehicle
+  const { count } = await supabase
+    .from("vehicles")
+    .select("id", { count: "exact", head: true })
+    .eq("owner_id", profile.id);
+
+  if (count === 0) {
+    return NextResponse.redirect(`${origin}/onboarding`);
+  }
+
+  return NextResponse.redirect(`${origin}/home`);
 }

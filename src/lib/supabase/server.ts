@@ -4,7 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { appConfig } from "@/lib/config";
-import { sharedAuthCookieOptions } from "@/lib/tenancy";
+import type { Profile, Vehicle, DealerSettings } from "@/lib/types";
 
 export async function createSupabaseServerClient() {
   if (!appConfig.supabaseUrl || !appConfig.supabaseKey) return null;
@@ -16,14 +16,10 @@ export async function createSupabaseServerClient() {
       setAll: (items) => {
         try {
           for (const { name, value, options } of items) {
-            cookieStore.set(
-              name,
-              value,
-              sharedAuthCookieOptions(options),
-            );
+            cookieStore.set(name, value, options);
           }
         } catch {
-          // Server Components cannot write cookies; Proxy refreshes the session.
+          // Server components cannot write cookies; proxy / middleware handles session refresh
         }
       },
     },
@@ -40,66 +36,85 @@ export function createSupabaseAdminClient() {
   });
 }
 
-export async function getAppProfile() {
-  const client = await createSupabaseServerClient();
-  if (!client) return null;
+export async function getCurrentUser() {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return null;
 
   const {
     data: { user },
-  } = await client.auth.getUser();
+  } = await supabase.auth.getUser();
+  return user ?? null;
+}
+
+export async function getCurrentProfile(): Promise<Profile | null> {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return null;
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data: existingProfile } = await client
+  const { data: profile } = await supabase
     .from("profiles")
-    .select("id,username")
-    .eq("auth_user_id", user.id)
+    .select("*")
+    .eq("id", user.id)
     .maybeSingle();
 
-  if (existingProfile) {
-    return {
-      id: existingProfile.id as string,
-      username: existingProfile.username as string | null,
-    };
-  }
+  if (profile) return profile as Profile;
 
+  // Auto-create profile if missing
   const admin = createSupabaseAdminClient();
   if (!admin) return null;
 
-  const { data: createdProfile } = await admin
+  const { data: created } = await admin
     .from("profiles")
-    .upsert(
-      {
-        auth_user_id: user.id,
-        display_name:
-          user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "User",
-        avatar_url: user.user_metadata?.avatar_url ?? null,
-      },
-      { onConflict: "auth_user_id" },
-    )
-    .select("id,username")
+    .upsert({
+      id: user.id,
+      full_name: user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "Suzuki Owner",
+      email: user.email ?? null,
+      avatar_url: user.user_metadata?.avatar_url ?? null,
+      role: "customer",
+    })
+    .select("*")
     .single();
 
-  return createdProfile
-    ? {
-        id: createdProfile.id as string,
-        username: createdProfile.username as string | null,
-      }
-    : null;
+  return (created as Profile) ?? null;
 }
 
-export async function getAppIdentity() {
-  const client = await createSupabaseServerClient();
-  if (!client) return null;
+export async function getUserVehicles(userId: string): Promise<Vehicle[]> {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return [];
 
-  const {
-    data: { user },
-  } = await client.auth.getUser();
-  if (!user) return null;
+  const { data } = await supabase
+    .from("vehicles")
+    .select("*")
+    .eq("owner_id", userId)
+    .order("created_at", { ascending: false });
 
-  return {
-    id: user.id,
-    name:
-      user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "User",
-    email: user.email ?? "",
+  return (data as Vehicle[]) ?? [];
+}
+
+export async function getDealerSettings(): Promise<DealerSettings> {
+  const fallback: DealerSettings = {
+    id: "default",
+    dealer_name: "Authorized Suzuki Parts Network",
+    phone: "+1 (800) 555-0199",
+    whatsapp: "+15550199823",
+    address: "450 Motorsport Expressway, Central Auto Mall",
+    notification_email: "inquiries@suzukiparts-dealer.com",
+    operating_hours: "Monday - Saturday: 8:00 AM - 6:30 PM",
+    updated_at: new Date().toISOString(),
   };
+
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return fallback;
+
+  const { data } = await supabase
+    .from("dealer_settings")
+    .select("*")
+    .eq("id", "default")
+    .maybeSingle();
+
+  return (data as DealerSettings) ?? fallback;
 }

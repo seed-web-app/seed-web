@@ -1,12 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { rootUrl, sharedAuthCookieOptions, usernameFromHost } from "@/lib/tenancy";
-
-function redirectWithCookies(url: string, source: NextResponse) {
-  const redirect = NextResponse.redirect(url);
-  for (const cookie of source.cookies.getAll()) redirect.cookies.set(cookie);
-  return redirect;
-}
 
 export async function proxy(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -23,11 +16,7 @@ export async function proxy(request: NextRequest) {
         }
         response = NextResponse.next({ request });
         for (const { name, value, options } of items) {
-          response.cookies.set(
-            name,
-            value,
-            sharedAuthCookieOptions(options),
-          );
+          response.cookies.set(name, value, options);
         }
       },
     },
@@ -36,24 +25,45 @@ export async function proxy(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
   const pathname = request.nextUrl.pathname;
-  const tenant = usernameFromHost(request.headers.get("host"));
 
-  if (tenant && !user) {
-    return redirectWithCookies(rootUrl("/login"), response);
+  const isPublicRoute =
+    pathname === "/" ||
+    pathname === "/login" ||
+    pathname.startsWith("/auth/callback");
+
+  // Require Google authentication for any non-public route
+  if (!user && !isPublicRoute) {
+    const redirectUrl = new URL("/login", request.url);
+    return NextResponse.redirect(redirectUrl);
   }
 
-  const protectedRoute =
-    pathname.startsWith("/dashboard") ||
-    pathname.startsWith("/setup/username") ||
-    pathname.startsWith("/api/profile");
+  // If user is already logged in and visits landing or login
+  if (user && (pathname === "/" || pathname === "/login")) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
 
-  if (protectedRoute && !user) {
-    return redirectWithCookies(rootUrl("/login"), response);
+    if (profile?.role === "admin") {
+      return NextResponse.redirect(new URL("/admin", request.url));
+    }
+    return NextResponse.redirect(new URL("/home", request.url));
   }
 
-  if (pathname === "/login" && user) {
-    return redirectWithCookies(rootUrl("/dashboard"), response);
+  // Admin route protection
+  if (user && pathname.startsWith("/admin")) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile?.role !== "admin") {
+      return NextResponse.redirect(new URL("/home", request.url));
+    }
   }
 
   return response;
@@ -61,6 +71,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|auth/callback).*)",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
