@@ -98,3 +98,32 @@ body {
 .horizontal-scroll::-webkit-scrollbar-thumb:hover {
   background: #999999;
 }
+
+/* iOS Native Feel Enhancements */
+@supports (-webkit-touch-callout: none) {
+  body {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+.ios-glass {
+  background: rgba(19, 25, 33, 0.92);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.ios-sheet {
+  border-top-left-radius: 1.5rem;
+  border-top-right-radius: 1.5rem;
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.2);
+}
+
+.pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 1rem);
+}
+
+.pt-safe {
+  padding-top: max(env(safe-area-inset-top, 0px), 0.5rem);
+}
+

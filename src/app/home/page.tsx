@@ -6,6 +6,8 @@ import { CategoryIconsGrid } from "@/components/customer/CategoryIconsGrid";
 import { ProductRail } from "@/components/customer/ProductRail";
 import { DealOfTheDay } from "@/components/customer/DealOfTheDay";
 import { EnquireButton } from "@/components/customer/EnquireButton";
+import { DepotsDirectory } from "@/components/customer/DepotsDirectory";
+import { TropicalMaintenanceGuide } from "@/components/customer/TropicalMaintenanceGuide";
 import { getGuestInquiryRecords } from "@/lib/inquiries";
 import { STANDING_CONDITION_DISCLAIMER, PART_CATEGORIES } from "@/lib/types";
 import type { Part, CarModel, NewsArticle, ForumThread } from "@/lib/types";
@@ -633,8 +635,14 @@ export default async function HomeFeedPage({ searchParams }: HomeFeedProps) {
           </div>
         </div>
 
-        {/* 7. "Why Buy Genuine Suzuki in Mauritius" Trust Reassurance Section */}
-        <div className="amazon-card bg-white p-6 sm:p-8 rounded-lg border border-[#e7e7e7] space-y-5">
+        {/* 7. Tropical Vehicle Maintenance Protocols */}
+        <TropicalMaintenanceGuide />
+
+        {/* 8. Authorized Mauritius Depots Directory */}
+        <DepotsDirectory />
+
+        {/* 9. "Why Buy Genuine Suzuki in Mauritius" Trust Reassurance Section */}
+        <div className="amazon-card bg-white p-6 sm:p-8 rounded-2xl border border-[#e7e7e7] space-y-5">
           <div className="text-center max-w-2xl mx-auto space-y-1">
             <span className="text-xs font-bold text-[#b12704] uppercase tracking-wider">
               Quality Assurance • Mauritius Network
