@@ -77,7 +77,7 @@ export default async function ForumPage({ searchParams }: ForumPageProps) {
     <div className="min-h-screen bg-[#eaeded] flex flex-col font-sans selection:bg-[#ffd814] selection:text-black">
       <CustomerNavbar profile={profile} vehicleCount={vehicles.length} />
 
-      <main className="flex-1 max-w-[1200px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <main className="flex-1 max-w-[1200px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-8 space-y-6">
         {/* Notifications */}
         {saved && (
           <div className="p-3.5 rounded-md bg-[#e7f4e4] border border-[#2b8a3e] text-xs text-[#2b8a3e] flex items-center gap-2">

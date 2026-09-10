@@ -84,18 +84,18 @@ export function DealOfTheDay({ dealPart }: DealOfTheDayProps) {
             </span>
           </div>
 
-          <div className="flex items-center gap-3 pt-1">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-1">
             <EnquireButton
               partId={dealPart.id}
               partName={dealPart.name}
               partPrice={Number(dealPart.price)}
               label="Enquire Deal Price"
-              className="px-6 py-2.5 rounded-full btn-amazon-primary text-xs sm:text-sm font-bold text-[#0f1111] shadow-md hover:shadow-lg transition-all flex items-center gap-1.5 cursor-pointer"
+              className="w-full sm:w-auto min-h-[44px] px-6 py-2.5 rounded-full btn-amazon-primary text-xs sm:text-sm font-bold text-[#0f1111] shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer"
             />
 
             <Link
               href={`/parts/${dealPart.id}`}
-              className="px-5 py-2.5 rounded-full bg-[#f0f2f2] hover:bg-[#e3e6e6] border border-[#d5d9d9] text-xs font-semibold text-[#0f1111] transition-all flex items-center gap-1"
+              className="w-full sm:w-auto min-h-[44px] px-5 py-2.5 rounded-full bg-[#f0f2f2] hover:bg-[#e3e6e6] border border-[#d5d9d9] text-xs font-semibold text-[#0f1111] transition-all flex items-center justify-center gap-1"
             >
               <span>View Specs</span>
               <ArrowRight className="w-3.5 h-3.5" />

@@ -34,12 +34,22 @@ export function IOSBottomTabBar() {
     return () => window.removeEventListener("inquiries-updated", handleUpdate);
   }, []);
 
+  if (
+    pathname === "/" ||
+    pathname === "/login" ||
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/setup") ||
+    pathname.startsWith("/onboarding")
+  ) {
+    return null;
+  }
+
   const tabs = [
     {
       label: "Home",
       href: "/home",
       icon: Home,
-      isActive: pathname === "/" || pathname === "/home",
+      isActive: pathname === "/home",
     },
     {
       label: "Cars",

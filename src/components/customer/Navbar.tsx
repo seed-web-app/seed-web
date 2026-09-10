@@ -52,7 +52,8 @@ export function CustomerNavbar({
   const [suggestions, setSuggestions] = useState<Part[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
-  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const desktopSearchRef = useRef<HTMLDivElement>(null);
+  const mobileSearchRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchCount = async () => {
@@ -113,10 +114,10 @@ export function CustomerNavbar({
   // Close search suggestions on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (
-        searchContainerRef.current &&
-        !searchContainerRef.current.contains(e.target as Node)
-      ) {
+      const target = e.target as Node;
+      const insideDesktop = desktopSearchRef.current?.contains(target);
+      const insideMobile = mobileSearchRef.current?.contains(target);
+      if (!insideDesktop && !insideMobile) {
         setShowSuggestions(false);
       }
     };
@@ -139,29 +140,177 @@ export function CustomerNavbar({
     ? profile.full_name?.split(" ")[0] || profile.email?.split("@")[0] || "Driver"
     : null;
 
+  const renderSearchForm = (isMobile: boolean) => (
+    <div
+      ref={isMobile ? mobileSearchRef : desktopSearchRef}
+      className={`relative ${isMobile ? "w-full" : "hidden md:block flex-1 max-w-3xl"}`}
+    >
+      <form
+        onSubmit={handleSearch}
+        className="flex items-center h-10 rounded-md overflow-hidden bg-white focus-within:ring-2 focus-within:ring-[#f08804] shadow-xs"
+      >
+        {!isMobile && (
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="h-full bg-[#f3f3f3] hover:bg-[#dadada] text-[#555555] text-xs px-2.5 border-r border-[#cdcdcd] focus:outline-none cursor-pointer hidden sm:block"
+          >
+            <option value="All">All Categories</option>
+            {PART_CATEGORIES.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
+        )}
+
+        <input
+          type="text"
+          value={searchTerm}
+          onFocus={() => setShowSuggestions(true)}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setShowSuggestions(true);
+          }}
+          placeholder={
+            isMobile
+              ? "Search Suzuki parts, bumpers, Swift..."
+              : "Search genuine Suzuki parts, bumpers, Swift, Jimny..."
+          }
+          className="flex-1 px-3.5 text-[#0f1111] text-xs sm:text-sm focus:outline-none placeholder:text-[#555555]"
+        />
+
+        <button
+          type="submit"
+          aria-label="Search"
+          className="h-full px-4 bg-[#febd69] hover:bg-[#f3a847] text-[#111111] flex items-center justify-center transition-colors cursor-pointer"
+        >
+          {isSearching ? (
+            <Loader2 className="w-5 h-5 animate-spin text-[#111111]" />
+          ) : (
+            <Search className="w-5 h-5 stroke-[2.5]" />
+          )}
+        </button>
+      </form>
+
+      {/* Live Autocomplete Suggestions Dropdown */}
+      {showSuggestions && searchTerm.trim().length > 0 && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#d5d9d9] rounded-lg shadow-2xl overflow-hidden z-50 animate-in fade-in duration-150">
+          {suggestions.length > 0 ? (
+            <div className="py-1 divide-y divide-[#f0f0f0]">
+              <div className="px-3 py-1.5 bg-[#f7fafa] flex items-center justify-between text-[11px] text-[#565959] font-medium">
+                <span>Suzuki Genuine Catalog Matches</span>
+                <span>{suggestions.length} items</span>
+              </div>
+
+              <div className="max-h-72 overflow-y-auto">
+                {suggestions.map((part) => (
+                  <Link
+                    key={part.id}
+                    href={`/parts/${part.id}`}
+                    onClick={() => setShowSuggestions(false)}
+                    className="flex items-center gap-3 px-3 py-2 hover:bg-[#f3f8f8] transition-colors group"
+                  >
+                    <div className="w-10 h-10 rounded bg-[#f7f7f7] border border-[#e7e7e7] p-1 flex-shrink-0 flex items-center justify-center overflow-hidden">
+                      {part.photos && part.photos[0] ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={getOptimizedImageUrl(part.photos[0], 80, 75)}
+                          alt={part.name}
+                          loading="lazy"
+                          decoding="async"
+                          className="max-h-full max-w-full object-contain"
+                        />
+                      ) : (
+                        <Wrench className="w-4 h-4 text-[#888888]" />
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-[#0f1111] group-hover:text-[#007185] truncate">
+                        {part.name}
+                      </p>
+                      <div className="flex items-center gap-2 text-[10px] text-[#565959] mt-0.5">
+                        <span className="px-1.5 py-0.2 bg-[#f0f2f2] rounded text-[#0f1111] font-semibold">
+                          {part.category}
+                        </span>
+                        {part.part_number && (
+                          <span className="truncate">OEM: {part.part_number}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="text-right flex-shrink-0">
+                      <span className="text-xs font-bold text-[#b12704] block">
+                        Rs {Number(part.price || 0).toLocaleString()}
+                      </span>
+                      <span className="text-[9px] text-[#007600] font-semibold">
+                        In Stock
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+
+              <div className="p-2 bg-[#fcfcfc] text-center">
+                <button
+                  type="button"
+                  onClick={handleSearch}
+                  className="text-xs font-bold text-[#007185] hover:text-[#c7511f] hover:underline cursor-pointer"
+                >
+                  View all catalog results for &ldquo;{searchTerm}&rdquo; →
+                </button>
+              </div>
+            </div>
+          ) : !isSearching ? (
+            <div className="p-4 text-center text-xs text-[#565959]">
+              No matching parts found for &ldquo;{searchTerm}&rdquo;. Try &ldquo;bumper&rdquo;, &ldquo;Swift&rdquo;, or &ldquo;Jimny&rdquo;.
+            </div>
+          ) : (
+            <div className="p-4 text-center text-xs text-[#565959] flex items-center justify-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin text-[#f08804]" />
+              <span>Searching Suzuki parts catalog...</span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <header className="w-full text-white font-sans text-xs select-none">
       {/* 1. Main Top Navigation Bar (Amazon Navy #131921) */}
       <div className="bg-[#131921] px-3 sm:px-4 py-2 flex items-center justify-between gap-2 sm:gap-4">
-        {/* Brand Wordmark */}
-        <Link
-          href="/home"
-          className="flex items-center gap-1.5 p-1.5 hover:outline hover:outline-1 hover:outline-white rounded transition-all flex-shrink-0"
-        >
-          <div className="w-8 h-8 rounded bg-suzuki-red flex items-center justify-center font-black text-white text-lg shadow-sm">
-            S
-          </div>
-          <div className="flex flex-col">
-            <span className="font-extrabold text-base tracking-tight text-white leading-none">
-              suzuki<span className="text-[#febd69]">.mu</span>
-            </span>
-            <span className="text-[9px] uppercase tracking-widest text-[#febd69] font-bold">
-              Mauritius
-            </span>
-          </div>
-        </Link>
+        {/* Left: Mobile Drawer Trigger + Brand Wordmark */}
+        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => setIsDrawerOpen(true)}
+            className="md:hidden p-1.5 -ml-1 text-white hover:text-[#febd69] transition-colors cursor-pointer flex items-center justify-center"
+            aria-label="Open Navigation Drawer"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
 
-        {/* Deliver to Mauritius Location Widget */}
+          <Link
+            href="/home"
+            className="flex items-center gap-1.5 p-1 hover:outline hover:outline-1 hover:outline-white rounded transition-all"
+          >
+            <div className="w-8 h-8 rounded bg-suzuki-red flex items-center justify-center font-black text-white text-lg shadow-sm">
+              S
+            </div>
+            <div className="flex flex-col">
+              <span className="font-extrabold text-base tracking-tight text-white leading-none">
+                suzuki<span className="text-[#febd69]">.mu</span>
+              </span>
+              <span className="text-[9px] uppercase tracking-widest text-[#febd69] font-bold">
+                Mauritius
+              </span>
+            </div>
+          </Link>
+        </div>
+
+        {/* Deliver to Mauritius Location Widget (Desktop) */}
         <div className="hidden md:flex items-center gap-1 p-1.5 hover:outline hover:outline-1 hover:outline-white rounded cursor-pointer transition-all flex-shrink-0">
           <MapPin className="w-4 h-4 text-white mt-1" />
           <div className="flex flex-col leading-tight">
@@ -170,135 +319,8 @@ export function CustomerNavbar({
           </div>
         </div>
 
-        {/* Big Amazon Search Bar with Live Autocomplete */}
-        <div ref={searchContainerRef} className="relative flex-1 max-w-3xl">
-          <form
-            onSubmit={handleSearch}
-            className="flex items-center h-10 rounded-md overflow-hidden bg-white focus-within:ring-2 focus-within:ring-[#f08804]"
-          >
-            {/* Category Dropdown */}
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="h-full bg-[#f3f3f3] hover:bg-[#dadada] text-[#555555] text-xs px-2.5 border-r border-[#cdcdcd] focus:outline-none cursor-pointer hidden sm:block"
-            >
-              <option value="All">All Categories</option>
-              {PART_CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-
-            {/* Search Input */}
-            <input
-              type="text"
-              value={searchTerm}
-              onFocus={() => setShowSuggestions(true)}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setShowSuggestions(true);
-              }}
-              placeholder="Search genuine Suzuki parts, bumpers, Swift, Jimny..."
-              className="flex-1 px-3.5 text-[#0f1111] text-xs sm:text-sm focus:outline-none placeholder:text-[#555555]"
-            />
-
-            {/* Golden Search Button */}
-            <button
-              type="submit"
-              aria-label="Search"
-              className="h-full px-4 bg-[#febd69] hover:bg-[#f3a847] text-[#111111] flex items-center justify-center transition-colors cursor-pointer"
-            >
-              {isSearching ? (
-                <Loader2 className="w-5 h-5 animate-spin text-[#111111]" />
-              ) : (
-                <Search className="w-5 h-5 stroke-[2.5]" />
-              )}
-            </button>
-          </form>
-
-          {/* Live Autocomplete Suggestions Dropdown */}
-          {showSuggestions && searchTerm.trim().length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#d5d9d9] rounded-lg shadow-2xl overflow-hidden z-50 animate-in fade-in duration-150">
-              {suggestions.length > 0 ? (
-                <div className="py-1 divide-y divide-[#f0f0f0]">
-                  <div className="px-3 py-1.5 bg-[#f7fafa] flex items-center justify-between text-[11px] text-[#565959] font-medium">
-                    <span>Suzuki Genuine Catalog Matches</span>
-                    <span>{suggestions.length} items</span>
-                  </div>
-
-                  <div className="max-h-80 overflow-y-auto">
-                    {suggestions.map((part) => (
-                      <Link
-                        key={part.id}
-                        href={`/parts/${part.id}`}
-                        onClick={() => setShowSuggestions(false)}
-                        className="flex items-center gap-3 px-3 py-2 hover:bg-[#f3f8f8] transition-colors group"
-                      >
-                        <div className="w-10 h-10 rounded bg-[#f7f7f7] border border-[#e7e7e7] p-1 flex-shrink-0 flex items-center justify-center overflow-hidden">
-                          {part.photos && part.photos[0] ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={getOptimizedImageUrl(part.photos[0], 80, 75)}
-                              alt={part.name}
-                              loading="lazy"
-                              decoding="async"
-                              className="max-h-full max-w-full object-contain"
-                            />
-                          ) : (
-                            <Wrench className="w-4 h-4 text-[#888888]" />
-                          )}
-                        </div>
-
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-bold text-[#0f1111] group-hover:text-[#007185] truncate">
-                            {part.name}
-                          </p>
-                          <div className="flex items-center gap-2 text-[10px] text-[#565959] mt-0.5">
-                            <span className="px-1.5 py-0.2 bg-[#f0f2f2] rounded text-[#0f1111] font-semibold">
-                              {part.category}
-                            </span>
-                            {part.part_number && (
-                              <span>OEM: {part.part_number}</span>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="text-right flex-shrink-0">
-                          <span className="text-xs font-bold text-[#b12704] block">
-                            Rs {Number(part.price || 0).toLocaleString()}
-                          </span>
-                          <span className="text-[9px] text-[#007600] font-semibold">
-                            In Stock
-                          </span>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-
-                  <div className="p-2 bg-[#fcfcfc] text-center">
-                    <button
-                      type="button"
-                      onClick={handleSearch}
-                      className="text-xs font-bold text-[#007185] hover:text-[#c7511f] hover:underline"
-                    >
-                      View all catalog results for &ldquo;{searchTerm}&rdquo; →
-                    </button>
-                  </div>
-                </div>
-              ) : !isSearching ? (
-                <div className="p-4 text-center text-xs text-[#565959]">
-                  No matching parts found for &ldquo;{searchTerm}&rdquo;. Try &ldquo;bumper&rdquo;, &ldquo;Swift&rdquo;, or &ldquo;Jimny&rdquo;.
-                </div>
-              ) : (
-                <div className="p-4 text-center text-xs text-[#565959] flex items-center justify-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin text-[#f08804]" />
-                  <span>Searching Suzuki parts catalog...</span>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        {/* Big Amazon Search Bar (Desktop) */}
+        {renderSearchForm(false)}
 
         {/* Right Navigation Actions */}
         <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
@@ -306,10 +328,11 @@ export function CustomerNavbar({
           {profile?.role === "admin" && (
             <Link
               href="/admin"
-              className="hidden lg:flex items-center gap-1 px-2 py-1 rounded bg-[#febd69] text-[#111111] font-bold text-xs hover:bg-[#f3a847] transition-colors"
+              className="flex items-center gap-1 px-2 py-1 rounded bg-[#febd69] text-[#111111] font-bold text-xs hover:bg-[#f3a847] transition-colors"
+              title="Admin Dashboard"
             >
               <ShieldCheck className="w-3.5 h-3.5 text-suzuki-red" />
-              <span>Admin</span>
+              <span className="hidden sm:inline">Admin</span>
             </Link>
           )}
 
@@ -317,70 +340,80 @@ export function CustomerNavbar({
           {profile ? (
             <Link
               href="/profile"
-              className="flex flex-col leading-tight p-1.5 hover:outline hover:outline-1 hover:outline-white rounded transition-all"
+              className="flex items-center sm:flex-col leading-tight p-1.5 hover:outline hover:outline-1 hover:outline-white rounded transition-all"
+              aria-label="Account & Garage"
             >
-              <span className="text-[11px] text-[#cccccc]">Hello, {firstName}</span>
-              <span className="font-bold text-white text-xs flex items-center gap-0.5">
-                <span>Account & Garage</span>
-                <ChevronDown className="w-3 h-3 text-[#cccccc]" />
-              </span>
+              <User className="w-5 h-5 sm:hidden text-white" />
+              <div className="hidden sm:flex sm:flex-col">
+                <span className="text-[11px] text-[#cccccc]">Hello, {firstName}</span>
+                <span className="font-bold text-white text-xs flex items-center gap-0.5">
+                  <span>Account & Garage</span>
+                  <ChevronDown className="w-3 h-3 text-[#cccccc]" />
+                </span>
+              </div>
             </Link>
           ) : (
             <Link
               href="/login"
-              className="flex flex-col leading-tight p-1.5 hover:outline hover:outline-1 hover:outline-white rounded transition-all"
+              className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full btn-amazon-primary text-xs font-bold text-[#0f1111] transition-all shadow-xs"
             >
-              <span className="text-[11px] text-[#cccccc]">Hello, Sign in</span>
-              <span className="font-bold text-white text-xs flex items-center gap-0.5">
-                <span>Account & Garage</span>
-                <ChevronDown className="w-3 h-3 text-[#cccccc]" />
-              </span>
+              Sign In
             </Link>
           )}
 
           {/* Returns & Inquiries */}
           <Link
             href="/profile#inquiries"
-            className="hidden sm:flex flex-col leading-tight p-1.5 hover:outline hover:outline-1 hover:outline-white rounded transition-all"
+            className="flex items-center sm:flex-col leading-tight p-1.5 hover:outline hover:outline-1 hover:outline-white rounded transition-all relative"
+            aria-label="Past Requests & Inquiries"
           >
-            <span className="text-[11px] text-[#cccccc]">Past Requests</span>
-            <span className="font-bold text-white text-xs">& Inquiries ({currentInquiryCount})</span>
+            <div className="relative sm:hidden">
+              <Inbox className="w-5 h-5 text-white" />
+              {currentInquiryCount > 0 && (
+                <span className="absolute -top-1 -right-1.5 min-w-[15px] h-3.5 px-0.5 rounded-full bg-[#f08804] text-[#111111] font-black text-[9px] flex items-center justify-center">
+                  {currentInquiryCount}
+                </span>
+              )}
+            </div>
+            <div className="hidden sm:flex sm:flex-col">
+              <span className="text-[11px] text-[#cccccc]">Past Requests</span>
+              <span className="font-bold text-white text-xs">& Inquiries ({currentInquiryCount})</span>
+            </div>
           </Link>
 
           {/* Garage Counter Widget */}
           <Link
             href="/profile#garage"
             className="flex items-center gap-1.5 p-1.5 hover:outline hover:outline-1 hover:outline-white rounded transition-all"
+            aria-label="Garage"
           >
             <div className="relative">
-              <Car className="w-7 h-7 text-white" />
-              <span className="absolute -top-1 -right-1.5 w-4 h-4 rounded-full bg-[#f08804] text-[#111111] font-black text-[10px] flex items-center justify-center">
+              <Car className="w-6 h-6 text-white" />
+              <span className="absolute -top-1 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-[#f08804] text-[#111111] font-black text-[10px] flex items-center justify-center">
                 {vehicleCount}
               </span>
             </div>
             <span className="hidden md:inline font-bold text-xs mt-2">Garage</span>
           </Link>
 
-          {/* Sign Out or Sign In CTA */}
-          {profile ? (
+          {/* Sign Out CTA */}
+          {profile && (
             <form action={signOut}>
               <button
                 type="submit"
                 title="Sign Out"
-                className="p-2 text-[#cccccc] hover:text-white transition-colors cursor-pointer"
+                className="p-1.5 sm:p-2 text-[#cccccc] hover:text-white transition-colors cursor-pointer"
               >
                 <LogOut className="w-4 h-4" />
               </button>
             </form>
-          ) : (
-            <Link
-              href="/login"
-              className="px-3 py-1.5 rounded-full btn-amazon-primary text-xs font-bold text-[#0f1111] transition-all shadow-xs"
-            >
-              Sign In
-            </Link>
           )}
         </div>
+      </div>
+
+      {/* 2. Mobile Full-Width Search Bar (md:hidden) */}
+      <div className="md:hidden bg-[#131921] px-3 pb-2.5 pt-0.5 border-t border-white/5">
+        {renderSearchForm(true)}
       </div>
 
       {/* 2. Secondary Subnav Bar (Amazon Charcoal #232f3e) */}
@@ -668,6 +701,29 @@ export function CustomerNavbar({
                     </a>
                   </li>
                 </ul>
+              </div>
+
+              {/* Drawer Auth Footer */}
+              <div className="pt-4 border-t border-[#e7e7e7]">
+                {profile ? (
+                  <form action={signOut}>
+                    <button
+                      type="submit"
+                      className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-[#f0f2f2] hover:bg-[#e3e6e6] text-[#0f1111] font-bold text-xs transition-colors cursor-pointer"
+                    >
+                      <LogOut className="w-4 h-4 text-suzuki-red" />
+                      <span>Sign Out ({firstName})</span>
+                    </button>
+                  </form>
+                ) : (
+                  <Link
+                    href="/login"
+                    onClick={() => setIsDrawerOpen(false)}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg btn-amazon-primary text-[#0f1111] font-bold text-xs transition-all shadow-xs"
+                  >
+                    <span>Sign In to Suzuki Account</span>
+                  </Link>
+                )}
               </div>
             </div>
           </div>

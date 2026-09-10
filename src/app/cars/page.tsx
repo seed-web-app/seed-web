@@ -24,7 +24,7 @@ export default async function CarsShowcasePage() {
     <div className="min-h-screen bg-[#eaeded] flex flex-col font-sans selection:bg-[#ffd814] selection:text-black">
       <CustomerNavbar profile={profile} vehicleCount={vehicles.length} />
 
-      <main className="flex-1 max-w-[1450px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <main className="flex-1 max-w-[1450px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-8 space-y-6">
         {/* Banner Header */}
         <div className="amazon-card p-6 sm:p-8 bg-gradient-to-r from-[#131921] to-[#232f3e] text-white">
           <div className="max-w-3xl space-y-2">
@@ -143,7 +143,7 @@ export default async function CarsShowcasePage() {
                       ? "Grand Vitara"
                       : car.name.split(" ")[1] || car.name
                   )}`}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 py-2 px-4 rounded-full btn-amazon-primary text-xs font-semibold"
+                  className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-1.5 py-2 px-4 rounded-full btn-amazon-primary text-xs font-semibold"
                 >
                   <Car className="w-3.5 h-3.5" />
                   <span>Browse Compatible Parts</span>
@@ -154,7 +154,7 @@ export default async function CarsShowcasePage() {
                   href="https://wa.me/2305550199"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 py-2 px-4 rounded-full btn-amazon-outline text-xs font-semibold"
+                  className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-1.5 py-2 px-4 rounded-full btn-amazon-outline text-xs font-semibold"
                 >
                   <Phone className="w-3.5 h-3.5 text-[#2b8a3e]" />
                   <span>Ask Dealership Rep</span>

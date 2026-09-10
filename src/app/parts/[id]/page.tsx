@@ -81,7 +81,7 @@ export default async function PartDetailPage({
         inquiryCount={inquiryCount || 0}
       />
 
-      <main className="flex-1 max-w-[1500px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-6">
+      <main className="flex-1 max-w-[1500px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 pb-24 md:pb-8 space-y-6">
         {/* Amazon Breadcrumbs */}
         <nav className="text-xs text-[#565959] flex items-center gap-1.5 flex-wrap">
           <Link href="/home" className="hover:text-[#c7511f] hover:underline">
@@ -320,7 +320,7 @@ export default async function PartDetailPage({
                 <button
                   type="submit"
                   disabled={part.status === "sold"}
-                  className={`w-full py-2.5 px-4 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm hover:shadow transition-all ${
+                  className={`w-full min-h-[44px] py-2.5 px-4 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm hover:shadow transition-all ${
                     part.status === "sold"
                       ? "bg-[#e7e7e7] text-[#565959] cursor-not-allowed"
                       : "btn-amazon-primary text-[#0f1111]"
@@ -336,7 +336,7 @@ export default async function PartDetailPage({
                   )}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="w-full py-2 px-4 rounded-full bg-white border border-[#d5d9d9] hover:bg-[#f3f3f3] text-[11px] font-semibold text-[#0f1111] flex items-center justify-center gap-1.5"
+                  className="w-full min-h-[44px] py-2 px-4 rounded-full bg-white border border-[#d5d9d9] hover:bg-[#f3f3f3] text-[11px] font-semibold text-[#0f1111] flex items-center justify-center gap-1.5"
                 >
                   <Phone className="w-3.5 h-3.5 text-[#2b8a3e]" />
                   <span>WhatsApp Parts Advisor</span>

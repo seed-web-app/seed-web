@@ -124,7 +124,7 @@ export default async function HomeFeedPage({ searchParams }: HomeFeedProps) {
         inquiryCount={inquiryCount || 0}
       />
 
-      <main className="flex-1 max-w-[1540px] w-full mx-auto px-2 sm:px-4 lg:px-6 pb-16 space-y-6">
+      <main className="flex-1 max-w-[1540px] w-full mx-auto px-2 sm:px-4 lg:px-6 pb-24 md:pb-16 space-y-6">
         {/* Amazon Hero Banner Slider (Active when not searching) */}
         {!isFiltered && <HeroSlider />}
 
@@ -651,11 +651,11 @@ export default async function HomeFeedPage({ searchParams }: HomeFeedProps) {
                         partName={p.name}
                         partPrice={Number(p.price || 0)}
                         label="Enquire"
-                        className="py-1.5 px-2 rounded-full btn-amazon-primary text-[11px] font-bold text-[#0f1111] text-center shadow-xs hover:shadow transition-all flex items-center justify-center gap-1 cursor-pointer"
+                        className="min-h-[38px] py-1.5 px-2 rounded-full btn-amazon-primary text-[11px] font-bold text-[#0f1111] text-center shadow-xs hover:shadow transition-all flex items-center justify-center gap-1 cursor-pointer"
                       />
                       <Link
                         href={`/parts/${p.id}`}
-                        className="py-1.5 px-2 rounded-full bg-[#f0f2f2] hover:bg-[#e3e6e6] border border-[#d5d9d9] text-[11px] font-semibold text-[#0f1111] text-center transition-all"
+                        className="min-h-[38px] py-1.5 px-2 rounded-full bg-[#f0f2f2] hover:bg-[#e3e6e6] border border-[#d5d9d9] text-[11px] font-semibold text-[#0f1111] text-center transition-all flex items-center justify-center"
                       >
                         Details
                       </Link>

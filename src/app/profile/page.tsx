@@ -116,7 +116,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
         inquiryCount={inquiries.length}
       />
 
-      <main className="flex-1 max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <main className="flex-1 max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-8 space-y-6">
         {/* Added to Enquiry Portal Success Banner */}
         {addedPart && (
           <div className="p-4 sm:p-5 rounded-lg bg-[#e7f4e4] border-2 border-[#2b8a3e] shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

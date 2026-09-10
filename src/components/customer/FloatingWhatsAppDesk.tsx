@@ -1,12 +1,24 @@
 "use client";
 
 import { MessageSquare } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 export function FloatingWhatsAppDesk() {
+  const pathname = usePathname();
   const whatsappNumber = "2305550199";
   const defaultMessage = encodeURIComponent(
     "Hello Suzuki Mauritius, I am enquiring from suzuki.mu customer network about genuine parts availability."
   );
+
+  if (
+    pathname === "/" ||
+    pathname === "/login" ||
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/setup") ||
+    pathname.startsWith("/onboarding")
+  ) {
+    return null;
+  }
 
   return (
     <div

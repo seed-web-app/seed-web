@@ -53,7 +53,7 @@ export function ProductRail({ title, subtitle, parts, viewAllLink }: ProductRail
         type="button"
         onClick={() => scroll("left")}
         aria-label="Scroll left"
-        className="absolute left-1 top-1/2 -translate-y-1/2 z-10 w-9 h-16 bg-white/90 hover:bg-white text-[#0f1111] border border-[#d5d9d9] shadow-md flex items-center justify-center rounded-r opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+        className="hidden sm:flex absolute left-1 top-1/2 -translate-y-1/2 z-10 w-9 h-16 bg-white/90 hover:bg-white text-[#0f1111] border border-[#d5d9d9] shadow-md items-center justify-center rounded-r opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
       >
         <ChevronLeft className="w-6 h-6" />
       </button>
@@ -63,7 +63,7 @@ export function ProductRail({ title, subtitle, parts, viewAllLink }: ProductRail
         type="button"
         onClick={() => scroll("right")}
         aria-label="Scroll right"
-        className="absolute right-1 top-1/2 -translate-y-1/2 z-10 w-9 h-16 bg-white/90 hover:bg-white text-[#0f1111] border border-[#d5d9d9] shadow-md flex items-center justify-center rounded-l opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+        className="hidden sm:flex absolute right-1 top-1/2 -translate-y-1/2 z-10 w-9 h-16 bg-white/90 hover:bg-white text-[#0f1111] border border-[#d5d9d9] shadow-md items-center justify-center rounded-l opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
       >
         <ChevronRight className="w-6 h-6" />
       </button>
@@ -160,12 +160,12 @@ export function ProductRail({ title, subtitle, parts, viewAllLink }: ProductRail
                     partName={part.name}
                     partPrice={Number(part.price || 0)}
                     label="Enquire"
-                    className="py-1.5 px-2 rounded-full btn-amazon-primary text-[11px] font-bold text-[#0f1111] text-center shadow-xs hover:shadow transition-all flex items-center justify-center gap-1 cursor-pointer"
+                    className="min-h-[38px] py-1.5 px-2 rounded-full btn-amazon-primary text-[11px] font-bold text-[#0f1111] text-center shadow-xs hover:shadow transition-all flex items-center justify-center gap-1 cursor-pointer"
                   />
 
                   <Link
                     href={`/parts/${part.id}`}
-                    className="py-1.5 px-2 rounded-full bg-[#f0f2f2] hover:bg-[#e3e6e6] border border-[#d5d9d9] text-[11px] font-semibold text-[#0f1111] text-center transition-all"
+                    className="min-h-[38px] py-1.5 px-2 rounded-full bg-[#f0f2f2] hover:bg-[#e3e6e6] border border-[#d5d9d9] text-[11px] font-semibold text-[#0f1111] text-center transition-all flex items-center justify-center"
                   >
                     Details
                   </Link>

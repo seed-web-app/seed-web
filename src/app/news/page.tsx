@@ -24,7 +24,7 @@ export default async function NewsFeedPage() {
     <div className="min-h-screen bg-[#eaeded] flex flex-col font-sans selection:bg-[#ffd814] selection:text-black">
       <CustomerNavbar profile={profile} vehicleCount={vehicles.length} />
 
-      <main className="flex-1 max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <main className="flex-1 max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-8 space-y-6">
         {/* Banner Header */}
         <div className="amazon-card p-6 sm:p-8 bg-gradient-to-r from-[#131921] to-[#232f3e] text-white rounded-lg">
           <div className="max-w-3xl space-y-2">
