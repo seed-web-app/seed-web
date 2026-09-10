@@ -139,7 +139,11 @@ export default async function CarsShowcasePage() {
               {/* Actions Footer */}
               <div className="pt-4 border-t border-[#f0f0f0] flex flex-col sm:flex-row items-center gap-3 justify-between">
                 <Link
-                  href={`/home?model=${encodeURIComponent(car.name.split(" ")[1] || car.name)}`}
+                  href={`/home?model=${encodeURIComponent(
+                    car.name.toLowerCase().includes("grand vitara")
+                      ? "Grand Vitara"
+                      : car.name.split(" ")[1] || car.name
+                  )}`}
                   className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 py-2 px-4 rounded-full btn-amazon-primary text-xs font-semibold"
                 >
                   <Car className="w-3.5 h-3.5" />
