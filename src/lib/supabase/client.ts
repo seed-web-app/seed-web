@@ -1,8 +1,9 @@
 "use client";
+
 import { createBrowserClient } from "@supabase/ssr";
-import { seedConfig } from "@/lib/config";
+import { appConfig } from "@/lib/config";
 
 export function createSupabaseBrowserClient() {
-  if (!seedConfig.supabaseUrl || !seedConfig.supabaseKey) return null;
-  return createBrowserClient(seedConfig.supabaseUrl, seedConfig.supabaseKey);
+  if (!appConfig.supabaseUrl || !appConfig.supabaseKey) return null;
+  return createBrowserClient(appConfig.supabaseUrl, appConfig.supabaseKey);
 }

@@ -1,3 +1,0 @@
-name: auth
-version: 1.0.0
-security: { require_server_authorization: true, require_rls: true }

@@ -18,7 +18,9 @@ export async function proxy(request: NextRequest) {
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll: (items) => {
-        for (const { name, value } of items) request.cookies.set(name, value);
+        for (const { name, value } of items) {
+          request.cookies.set(name, value);
+        }
         response = NextResponse.next({ request });
         for (const { name, value, options } of items) {
           response.cookies.set(
@@ -34,44 +36,23 @@ export async function proxy(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  const host = request.headers.get("host");
-  const tenant = usernameFromHost(host);
   const pathname = request.nextUrl.pathname;
+  const tenant = usernameFromHost(request.headers.get("host"));
 
-  // Rule 1: If accessing a tenant subdomain (e.g. username.bestmodel.fun)
-  if (tenant) {
-    if (!user) {
-      // Unauthenticated user trying to access any tenant subdomain must be redirected to main login
-      return redirectWithCookies(rootUrl("/login"), response);
-    }
-  }
-
-  // Rule 2: Rewrite uppercase / legacy doc routes to canonical lowercase pages
-  if (pathname === "/EULA") {
-    return NextResponse.rewrite(new URL("/eula", request.url));
-  }
-  if (pathname === "/Privacy") {
-    return NextResponse.rewrite(new URL("/privacy", request.url));
-  }
-  if (pathname === "/Support") {
-    return NextResponse.rewrite(new URL("/support", request.url));
-  }
-  if (pathname === "/docs" || pathname === "/documentation") {
-    return NextResponse.rewrite(new URL("/doc", request.url));
-  }
-
-  // Rule 3: Protected routes on any domain
-  const protectedRoute =
-    pathname.startsWith("/dashboard") ||
-    pathname.startsWith("/onboarding") ||
-    pathname.startsWith("/setup/username");
-
-  if (!user && protectedRoute) {
+  if (tenant && !user) {
     return redirectWithCookies(rootUrl("/login"), response);
   }
 
-  if (user && pathname === "/login") {
+  const protectedRoute =
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/setup/username") ||
+    pathname.startsWith("/api/profile");
+
+  if (protectedRoute && !user) {
+    return redirectWithCookies(rootUrl("/login"), response);
+  }
+
+  if (pathname === "/login" && user) {
     return redirectWithCookies(rootUrl("/dashboard"), response);
   }
 
@@ -80,6 +61,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|auth/callback|api/health).*)",
+    "/((?!_next/static|_next/image|favicon.ico|auth/callback).*)",
   ],
 };

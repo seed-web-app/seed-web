@@ -1,91 +1,105 @@
 import "server-only";
+
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
-import { seedConfig } from "@/lib/config";
+import { appConfig } from "@/lib/config";
 import { sharedAuthCookieOptions } from "@/lib/tenancy";
 
 export async function createSupabaseServerClient() {
-  if (!seedConfig.supabaseUrl || !seedConfig.supabaseKey) return null;
+  if (!appConfig.supabaseUrl || !appConfig.supabaseKey) return null;
+
   const cookieStore = await cookies();
-  return createServerClient(seedConfig.supabaseUrl, seedConfig.supabaseKey, {
+  return createServerClient(appConfig.supabaseUrl, appConfig.supabaseKey, {
     cookies: {
       getAll: () => cookieStore.getAll(),
-      setAll: (items) => { try { items.forEach(({ name, value, options }) => cookieStore.set(name, value, sharedAuthCookieOptions(options))); } catch { /* Server Components cannot always write cookies. */ } },
+      setAll: (items) => {
+        try {
+          for (const { name, value, options } of items) {
+            cookieStore.set(
+              name,
+              value,
+              sharedAuthCookieOptions(options),
+            );
+          }
+        } catch {
+          // Server Components cannot write cookies; Proxy refreshes the session.
+        }
+      },
     },
   });
 }
 
-export async function getSeedProfile() {
+export function createSupabaseAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+
+  return createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+export async function getAppProfile() {
   const client = await createSupabaseServerClient();
   if (!client) return null;
+
   const {
     data: { user },
   } = await client.auth.getUser();
   if (!user) return null;
 
-  const { data: profile } = await client
+  const { data: existingProfile } = await client
     .from("profiles")
     .select("id,username")
     .eq("auth_user_id", user.id)
     .maybeSingle();
 
-  if (profile) {
-    return { id: profile.id, username: profile.username as string | null, demo: false };
+  if (existingProfile) {
+    return {
+      id: existingProfile.id as string,
+      username: existingProfile.username as string | null,
+    };
   }
 
-  // If user was created via OAuth but trigger was missed or delayed, create profile via admin
   const admin = createSupabaseAdminClient();
-  if (admin) {
-    const displayName =
-      user.user_metadata?.full_name ??
-      user.email?.split("@")[0] ??
-      "Seed User";
-    const avatarUrl = user.user_metadata?.avatar_url ?? null;
+  if (!admin) return null;
 
-    const { data: createdProfile } = await admin
-      .from("profiles")
-      .upsert(
-        {
-          auth_user_id: user.id,
-          display_name: displayName,
-          avatar_url: avatarUrl,
-        },
-        { onConflict: "auth_user_id" },
-      )
-      .select("id,username")
-      .single();
+  const { data: createdProfile } = await admin
+    .from("profiles")
+    .upsert(
+      {
+        auth_user_id: user.id,
+        display_name:
+          user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "User",
+        avatar_url: user.user_metadata?.avatar_url ?? null,
+      },
+      { onConflict: "auth_user_id" },
+    )
+    .select("id,username")
+    .single();
 
-    if (createdProfile) {
-      // Ensure workspace exists
-      await admin
-        .from("workspaces")
-        .upsert(
-          { owner_user_id: createdProfile.id, name: "My workspace" },
-          { onConflict: "owner_user_id" }
-        );
-
-      return {
-        id: createdProfile.id,
+  return createdProfile
+    ? {
+        id: createdProfile.id as string,
         username: createdProfile.username as string | null,
-        demo: false,
-      };
-    }
-  }
-
-  return null;
+      }
+    : null;
 }
 
-export async function getSeedIdentity() {
+export async function getAppIdentity() {
   const client = await createSupabaseServerClient();
   if (!client) return null;
-  const { data: { user } } = await client.auth.getUser();
-  if (!user) return null;
-  return { id: user.id, name: user.user_metadata.full_name ?? user.email?.split("@")[0] ?? "Seed user", email: user.email ?? "", avatarUrl: user.user_metadata.avatar_url ?? null, demo: false };
-}
 
-export function createSupabaseAdminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL; const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceRoleKey) return null;
-  return createClient(url, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
+  const {
+    data: { user },
+  } = await client.auth.getUser();
+  if (!user) return null;
+
+  return {
+    id: user.id,
+    name:
+      user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "User",
+    email: user.email ?? "",
+  };
 }

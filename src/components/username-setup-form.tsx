@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { ArrowRight, AtSign, Check } from "lucide-react";
 import {
   isAvailableUsernameFormat,
   normalizeUsername,
@@ -10,7 +9,6 @@ import {
 
 type ClaimResponse = {
   message?: string;
-  username?: string;
   dashboardUrl?: string;
 };
 
@@ -26,6 +24,7 @@ export function UsernameSetupForm({ rootDomain }: { rootDomain: string }) {
 
     setSaving(true);
     setError(null);
+
     try {
       const response = await fetch("/api/profile/username", {
         method: "POST",
@@ -33,13 +32,15 @@ export function UsernameSetupForm({ rootDomain }: { rootDomain: string }) {
         body: JSON.stringify({ username }),
       });
       const data = (await response.json()) as ClaimResponse;
+
       if (!response.ok || !data.dashboardUrl) {
-        setError(data.message ?? "Seed could not save that username.");
+        setError(data.message ?? "That address could not be created.");
         return;
       }
+
       window.location.assign(data.dashboardUrl);
     } catch {
-      setError("Seed could not reach the server. Please try again.");
+      setError("The server could not be reached. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -47,9 +48,9 @@ export function UsernameSetupForm({ rootDomain }: { rootDomain: string }) {
 
   return (
     <form className="username-form" onSubmit={claimUsername}>
-      <label htmlFor="username">Choose your username</label>
+      <label htmlFor="username">Your username</label>
       <div className="username-input-wrap">
-        <AtSign aria-hidden="true" size={18} />
+        <span aria-hidden="true">@</span>
         <input
           id="username"
           name="username"
@@ -68,26 +69,25 @@ export function UsernameSetupForm({ rootDomain }: { rootDomain: string }) {
           aria-invalid={Boolean(error)}
           autoFocus
         />
-        {valid && <Check aria-label="Valid username" size={18} />}
+        <b aria-hidden="true">{valid ? "✓" : ""}</b>
       </div>
       <p id="username-help" className="username-help">
-        3–30 letters, numbers, or hyphens. You cannot change it later.
+        Use 3–30 letters, numbers, or hyphens.
       </p>
       <div id="username-preview" className="username-preview">
-        <span>Your private dashboard address</span>
-        <strong>{username || "yourname"}.{rootDomain}</strong>
+        <span>Your new address</span>
+        <strong>
+          {username || "yourname"}.{rootDomain}
+        </strong>
       </div>
-      {error && (
+      {error ? (
         <p className="form-error" role="alert">
           {error}
         </p>
-      )}
-      <button
-        className="button button-dark username-submit"
-        disabled={!valid || saving}
-      >
-        {saving ? "Creating your dashboard…" : "Create my dashboard"}
-        {!saving && <ArrowRight aria-hidden="true" size={16} />}
+      ) : null}
+      <button className="google-button username-submit" disabled={!valid || saving}>
+        {saving ? "Creating your address…" : "Create my workspace"}
+        {!saving ? <span aria-hidden="true">→</span> : null}
       </button>
     </form>
   );

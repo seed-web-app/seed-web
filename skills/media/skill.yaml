@@ -1,3 +1,0 @@
-name: media
-version: 1.0.0
-security: { validate_upload_type: true, validate_upload_size: true }

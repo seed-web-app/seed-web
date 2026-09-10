@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   dashboardUrl,
@@ -7,19 +6,11 @@ import {
   normalizeUsername,
 } from "@/lib/tenancy";
 
-const usernameSchema = z
-  .string()
-  .transform(normalizeUsername)
-  .refine(isAvailableUsernameFormat, {
-    message:
-      "Use 3–30 lowercase letters, numbers, or hyphens. Start and end with a letter or number.",
-  });
-
 export async function POST(request: Request) {
   const supabase = await createSupabaseServerClient();
   if (!supabase) {
     return NextResponse.json(
-      { message: "Seed authentication is not configured." },
+      { message: "Authentication is not configured." },
       { status: 503 },
     );
   }
@@ -38,21 +29,27 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Invalid request." }, { status: 400 });
   }
 
-  const parsed = usernameSchema.safeParse(
+  const requested =
     typeof body === "object" && body !== null && "username" in body
-      ? body.username
-      : undefined,
+      ? (body as { username?: unknown }).username
+      : undefined;
+  const username = normalizeUsername(
+    typeof requested === "string" ? requested : "",
   );
-  if (!parsed.success) {
+
+  if (!isAvailableUsernameFormat(username)) {
     return NextResponse.json(
-      { message: parsed.error.issues[0]?.message ?? "Invalid username." },
+      {
+        message:
+          "Use 3–30 lowercase letters, numbers, or hyphens. Start and end with a letter or number.",
+      },
       { status: 400 },
     );
   }
 
   const { data: claimedUsername, error } = await supabase.rpc(
-    "claim_seed_username",
-    { requested_username: parsed.data },
+    "claim_username",
+    { requested_username: username },
   );
 
   if (error) {
@@ -62,18 +59,16 @@ export async function POST(request: Request) {
       {
         message: unavailable
           ? "That username is already taken. Try another one."
-          : "Seed could not save that username. Please try again.",
+          : "That address could not be created. Please try again.",
       },
       { status: unavailable ? 409 : 500 },
     );
   }
 
-  const username = String(claimedUsername);
-  // Re-issue an existing root-domain session with the shared cookie scope so
-  // accounts created before subdomain tenancy was enabled transition cleanly.
   await supabase.auth.refreshSession();
+  const claimed = String(claimedUsername);
   return NextResponse.json({
-    username,
-    dashboardUrl: dashboardUrl(username),
+    username: claimed,
+    dashboardUrl: dashboardUrl(claimed),
   });
 }

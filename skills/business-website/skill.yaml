@@ -1,5 +1,0 @@
-name: business-website
-version: 1.0.0
-requires: [base-app]
-pages: [home, about, contact]
-tests: [responsive_navigation, contact_validation]

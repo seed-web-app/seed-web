@@ -1,19 +1,15 @@
 const fallbackAppUrl = "http://localhost:3000";
 
 export const reservedUsernames = new Set([
+  "account",
   "admin",
   "api",
   "app",
   "auth",
-  "bestmodel",
   "dashboard",
-  "docs",
-  "ftp",
   "help",
   "localhost",
   "login",
-  "mail",
-  "seed",
   "status",
   "support",
   "www",
@@ -44,23 +40,33 @@ export function appUrl() {
 }
 
 export function rootUrl(path = "/") {
-  const domain = rootDomain();
-  const base = domain ? `https://${domain}` : appUrl();
+  const base = rootDomain() ? `https://${rootDomain()}` : appUrl();
   return new URL(path, `${base}/`).toString();
 }
 
 export function dashboardUrl(username: string, path = "/dashboard") {
+  const base = rootDomain()
+    ? `https://${username}.${rootDomain()}`
+    : appUrl();
+  return new URL(path, `${base}/`).toString();
+}
+
+function hostnameFromHost(host: string | null) {
+  return host?.toLowerCase().split(":")[0].replace(/\.$/, "") ?? "";
+}
+
+export function isRootHost(host: string | null) {
   const domain = rootDomain();
-  if (!domain) return new URL(path, `${appUrl()}/`).toString();
-  return new URL(path, `https://${username}.${domain}/`).toString();
+  const hostname = hostnameFromHost(host);
+  return Boolean(
+    domain && (hostname === domain || hostname === `www.${domain}`),
+  );
 }
 
 export function usernameFromHost(host: string | null) {
   const domain = rootDomain();
-  if (!domain || !host) return null;
-
-  const hostname = host.toLowerCase().split(":")[0].replace(/\.$/, "");
-  if (hostname === domain || hostname === `www.${domain}`) return null;
+  const hostname = hostnameFromHost(host);
+  if (!domain || !hostname || isRootHost(host)) return null;
   if (!hostname.endsWith(`.${domain}`)) return null;
 
   const candidate = hostname.slice(0, -(domain.length + 1));

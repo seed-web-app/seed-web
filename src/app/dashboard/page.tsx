@@ -1,43 +1,93 @@
-import { getSeedIdentity } from "@/lib/supabase/server";
-import { SeedBuilderWorkspace } from "@/components/seed-builder-workspace";
-import { getDashboardContext } from "@/lib/dashboard-context";
-import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import { dashboardUrl, rootUrl, usernameFromHost } from "@/lib/tenancy";
-export const dynamic="force-dynamic";
+import { redirect } from "next/navigation";
+import { signOut } from "@/app/auth/actions";
+import { getAppIdentity, getAppProfile } from "@/lib/supabase/server";
+import {
+  dashboardUrl,
+  isRootHost,
+  rootDomain,
+  rootUrl,
+  usernameFromHost,
+} from "@/lib/tenancy";
 
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ project?: string }>;
-}) {
-  const { project } = await searchParams;
-  const [identity, context, requestHeaders] = await Promise.all([
-    getSeedIdentity(),
-    getDashboardContext(project),
+export const dynamic = "force-dynamic";
+
+export default async function DashboardPage() {
+  const [identity, profile, requestHeaders] = await Promise.all([
+    getAppIdentity(),
+    getAppProfile(),
     headers(),
   ]);
 
-  if (!identity) redirect(rootUrl("/login"));
-  if (!context.username) redirect(rootUrl("/setup/username"));
+  if (!identity || !profile) redirect(rootUrl("/login"));
+  if (!profile.username) redirect(rootUrl("/setup/username"));
 
   const host = requestHeaders.get("host");
   const tenant = usernameFromHost(host);
 
-  // If visiting from a subdomain and it does NOT match the authenticated user's username,
-  // reject access to prevent User A accessing User B's dashboard.
-  if (tenant && tenant !== context.username) {
-    // Redirect to the user's own authorized dashboard
-    redirect(dashboardUrl(context.username, "/dashboard"));
+  if (tenant && tenant !== profile.username) {
+    redirect(dashboardUrl(profile.username));
   }
 
-  // If on the root domain, redirect to their private subdomain dashboard
-  if (!tenant && context.username) {
-    const suffix = project ? `?project=${encodeURIComponent(project)}` : "";
-    redirect(dashboardUrl(context.username, `/dashboard${suffix}`));
+  if (rootDomain() && isRootHost(host)) {
+    redirect(dashboardUrl(profile.username));
   }
 
-  if (!context.projectId) redirect(rootUrl("/onboarding"));
+  const address = rootDomain()
+    ? `${profile.username}.${rootDomain()}`
+    : profile.username;
 
-  return <SeedBuilderWorkspace identity={identity} context={context} />;
+  return (
+    <main className="dashboard-shell">
+      <nav className="dashboard-nav">
+        <a className="wordmark wordmark-light" href={rootUrl("/")}>
+          new<span>/</span>app
+        </a>
+        <form action={signOut}>
+          <button className="sign-out" type="submit">
+            Sign out
+          </button>
+        </form>
+      </nav>
+
+      <section className="dashboard-content">
+        <div className="dashboard-heading">
+          <p className="section-label">Clean workspace</p>
+          <h1>Ready for the new idea.</h1>
+          <p>
+            Everything from the previous app has been removed. This page is the
+            starting point for what you build next.
+          </p>
+        </div>
+
+        <div className="dashboard-grid">
+          <article className="address-card">
+            <p>Your private address</p>
+            <strong>{address}</strong>
+            <span>
+              <i /> Active
+            </span>
+          </article>
+          <article className="identity-card">
+            <p>Signed in with Google</p>
+            <strong>{identity.name}</strong>
+            <span>{identity.email}</span>
+          </article>
+          <article className="blank-card">
+            <span>00</span>
+            <div>
+              <p>Features</p>
+              <strong>Intentionally empty</strong>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <footer className="dashboard-footer">
+        <span>Supabase connected</span>
+        <span>Deployed with Vercel</span>
+        <span>Source on GitHub</span>
+      </footer>
+    </main>
+  );
 }

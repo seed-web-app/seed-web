@@ -1,4 +1,5 @@
 "use server";
+
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { rootUrl } from "@/lib/tenancy";
@@ -6,6 +7,7 @@ import { rootUrl } from "@/lib/tenancy";
 export async function signInWithGoogle() {
   const supabase = await createSupabaseServerClient();
   if (!supabase) redirect("/login?error=auth");
+
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
@@ -13,6 +15,7 @@ export async function signInWithGoogle() {
       queryParams: { access_type: "offline", prompt: "consent" },
     },
   });
+
   if (error || !data.url) redirect("/login?error=oauth");
   redirect(data.url);
 }

@@ -1,5 +1,5 @@
 {
-  "name": "seed-control",
+  "name": "new-web-app",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -7,29 +7,21 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run",
-    "check": "npm run lint && npm run test && npm run build",
-    "release:check": "node scripts/check-production-env.mjs && npm run check"
+    "check": "npm run lint && npm run build"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",
     "@supabase/supabase-js": "^2.112.4",
-    "lucide-react": "^1.37.0",
     "next": "16.3.3",
-    "openai": "^7.8.0",
     "react": "19.2.8",
-    "react-dom": "19.2.8",
-    "zod": "^4.5.4"
+    "react-dom": "19.2.8"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.3",
-    "tailwindcss": "^4",
-    "typescript": "^5",
-    "vitest": "^4.1.11"
+    "typescript": "^5"
   }
 }

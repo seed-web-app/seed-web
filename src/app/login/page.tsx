@@ -1,40 +1,60 @@
 import Link from "next/link";
 import { signInWithGoogle } from "@/app/auth/actions";
-export const dynamic="force-dynamic";
 
-export default function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
-  void searchParams;
+export const dynamic = "force-dynamic";
+
+const errorMessages: Record<string, string> = {
+  auth: "Authentication is not configured yet.",
+  oauth: "Google sign-in could not be started. Please try again.",
+  no_code: "Google did not return a sign-in code.",
+  exchange_failed: "The sign-in session could not be completed.",
+  user_verification_failed: "Your Google account could not be verified.",
+};
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error } = await searchParams;
+
   return (
-    <main className="auth-page">
-      <Link className="brand auth-brand" href="/">
-        seed<span>.</span>
+    <main className="auth-shell">
+      <Link className="wordmark auth-wordmark" href="/">
+        new<span>/</span>app
       </Link>
       <section className="auth-card">
-        <div className="seed-mark">✦</div>
-        <p className="eyebrow">Welcome to Seed</p>
-        <h1>
-          Let’s build something
-          <br />
-          <em>useful together.</em>
-        </h1>
-        <p>Sign in to create and manage websites in accounts you own.</p>
+        <div className="auth-index">01</div>
+        <p className="section-label">Welcome</p>
+        <h1>Continue to your clean workspace.</h1>
+        <p className="auth-copy">
+          Google is the only sign-in method. No password or additional account
+          setup is needed.
+        </p>
+        {error ? (
+          <p className="form-error" role="alert">
+            {errorMessages[error] ?? "Sign-in failed. Please try again."}
+          </p>
+        ) : null}
         <form action={signInWithGoogle}>
           <button className="google-button" type="submit">
-            <span className="google-g">G</span>
+            <span className="google-mark" aria-hidden="true">
+              G
+            </span>
             Continue with Google
+            <span aria-hidden="true">→</span>
           </button>
         </form>
-        <small>
-          By continuing, you agree that Seed will only access projects you explicitly authorize.
-        </small>
+        <small>Authentication is securely handled by Google and Supabase.</small>
       </section>
-      <aside className="auth-quote">
+      <aside className="auth-aside" aria-hidden="true">
+        <span>YOUR SPACE</span>
+        <div className="orb" />
         <p>
-          “Your code. Your database.
+          One login.
           <br />
-          Your hosting.”
+          One private address.
         </p>
-        <span>Seed just makes them easy.</span>
       </aside>
     </main>
   );
