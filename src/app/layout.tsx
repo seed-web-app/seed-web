@@ -3,15 +3,15 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Suzuki Parts Customer Network | Authorized Dealer",
+  title: "Suzuki Mauritius | Customer Network & Auto-Parts Marketplace",
   description:
-    "Direct owner access to authorized Suzuki auto-parts, OEM body panels, mechanical components, and care guides. Connect with dealer parts specialists.",
+    "Official customer network for Suzuki owners in Mauritius. Genuine parts catalog, vehicle showcase, technical car care news, and owner community forum.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className="dark">
-      <body className="bg-suzuki-black text-suzuki-light min-h-screen selection:bg-suzuki-red selection:text-white">
+    <html lang="en">
+      <body className="bg-amazon-bg text-amazon-text min-h-screen selection:bg-amazon-yellow selection:text-black">
         {children}
       </body>
     </html>

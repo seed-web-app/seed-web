@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { signInWithGoogle } from "@/app/auth/actions";
-import { Shield, ArrowLeft, AlertCircle } from "lucide-react";
+import { ArrowLeft, AlertCircle } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -21,59 +21,45 @@ export default async function LoginPage({
   const { error } = await searchParams;
 
   return (
-    <main className="min-h-screen bg-carbon-pattern flex flex-col justify-between p-6 selection:bg-suzuki-red selection:text-white">
-      {/* Top back navigation */}
-      <div className="w-full max-w-5xl mx-auto flex items-center justify-between">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to overview</span>
-        </Link>
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-md bg-suzuki-red flex items-center justify-center font-black text-white text-sm">
+    <main className="min-h-screen bg-[#eaeded] flex flex-col justify-between p-4 font-sans selection:bg-[#ffd814] selection:text-black">
+      {/* Top Header Logo */}
+      <div className="w-full max-w-sm mx-auto flex flex-col items-center pt-8 pb-4">
+        <Link href="/" className="flex items-center gap-2 mb-2">
+          <div className="w-9 h-9 rounded bg-suzuki-red flex items-center justify-center font-black text-white text-xl shadow-sm">
             S
           </div>
-          <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
-            Dealer Network
+          <span className="font-extrabold text-2xl tracking-tight text-[#131921]">
+            suzuki<span className="text-[#c7511f]">.mu</span>
           </span>
-        </div>
+        </Link>
+        <span className="text-[11px] font-bold uppercase tracking-widest text-[#565959]">
+          Mauritius Owners Portal
+        </span>
       </div>
 
-      {/* Center Auth Card */}
-      <div className="w-full max-w-md mx-auto my-12">
-        <div className="p-8 sm:p-10 rounded-3xl bg-glass border border-white/10 shadow-2xl shadow-black/80 relative overflow-hidden">
-          {/* Subtle top red glow accent */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-1 bg-gradient-to-r from-transparent via-suzuki-red to-transparent opacity-80" />
-
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-suzuki-red/15 border border-suzuki-red/30 text-suzuki-brightred mb-4 shadow-lg shadow-suzuki-red/20">
-              <Shield className="w-7 h-7" />
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              Customer & Dealer Portal
-            </h1>
-            <p className="text-sm text-slate-400 mt-2">
-              Sign in with your verified Google account to access parts catalogs, submit leads, or
-              manage dealership operations.
-            </p>
-          </div>
+      {/* Center Amazon-Style Sign-In Card */}
+      <div className="w-full max-w-sm mx-auto my-6">
+        <div className="amazon-card p-6 sm:p-7 bg-white shadow-md border border-[#d5d9d9]">
+          <h1 className="text-2xl font-normal text-[#0f1111] mb-3">
+            Sign In
+          </h1>
+          <p className="text-xs text-[#565959] mb-5 leading-relaxed">
+            Use your verified Google account to access parts catalogs, submit offline leads, or join community discussions.
+          </p>
 
           {error && (
-            <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30 flex items-start gap-3 text-red-300 text-xs leading-relaxed">
-              <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-              <span>{errorDescriptions[error] || "Sign-in error occurred. Please try again."}</span>
+            <div className="mb-4 p-3 rounded bg-[#fdf3f2] border border-[#d9381e] flex items-start gap-2 text-[#d9381e] text-xs">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <span>{errorDescriptions[error] || "Sign-in failed. Please try again."}</span>
             </div>
           )}
 
-          {/* Single Confident CTA */}
           <form action={signInWithGoogle} className="space-y-4">
             <button
               type="submit"
-              className="w-full flex items-center justify-center gap-3.5 px-6 py-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-bold text-sm shadow-xl shadow-white/5 transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
+              className="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-full btn-amazon-primary text-xs font-semibold cursor-pointer shadow-sm text-[#0f1111]"
             >
-              <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24">
                 <path
                   fill="#4285F4"
                   d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"
@@ -95,19 +81,26 @@ export default async function LoginPage({
             </button>
           </form>
 
-          <div className="mt-8 pt-6 border-t border-white/10 text-center">
-            <p className="text-[12px] text-slate-400">
-              No registration forms or passwords needed. Your Google login automatically registers
-              your profile and secures your garage.
-            </p>
+          <div className="mt-6 pt-4 border-t border-[#e7e7e7] text-[11px] text-[#565959] leading-relaxed">
+            By continuing, you agree to the Suzuki Mauritius Customer Network Terms of Service and Privacy Notice.
           </div>
+        </div>
+
+        <div className="mt-6 text-center">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-xs text-[#007185] hover:text-[#c7511f] hover:underline"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Back to Homepage</span>
+          </Link>
         </div>
       </div>
 
-      {/* Bottom Legal Note */}
-      <div className="w-full text-center text-xs text-slate-400">
-        <p>Authorized Suzuki Parts Customer Network • Secure OAuth 2.0</p>
-      </div>
+      {/* Footer */}
+      <footer className="w-full py-4 text-center text-xs text-[#565959] border-t border-[#d5d9d9]">
+        <p>© {new Date().getFullYear()} Suzuki Mauritius Parts & Owner Network. All rights reserved.</p>
+      </footer>
     </main>
   );
 }

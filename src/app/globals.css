@@ -3,9 +3,10 @@
 @tailwind utilities;
 
 :root {
-  --background: #0a0d14;
-  --foreground: #f8fafc;
-  --suzuki-red: #e60012;
+  --background: #eaeded;
+  --foreground: #0f1111;
+  --amazon-yellow: #ffd814;
+  --amazon-orange: #ffa41c;
 }
 
 body {
@@ -17,48 +18,83 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Automotive Carbon Subtle Pattern */
-.bg-carbon-pattern {
-  background-color: #0a0d14;
-  background-image: 
-    radial-gradient(rgba(230, 0, 18, 0.08) 1px, transparent 0),
-    linear-gradient(to bottom, rgba(18, 23, 34, 0.8), rgba(10, 13, 20, 0.95));
-  background-size: 24px 24px, 100% 100%;
+/* Amazon Button Styles */
+.btn-amazon-primary {
+  background: #ffd814;
+  border: 1px solid #fcd200;
+  border-radius: 9999px;
+  color: #0f1111;
+  font-weight: 500;
+  box-shadow: 0 2px 5px rgba(213, 217, 217, 0.5);
+  transition: background 0.15s ease-in-out;
 }
 
-.bg-glass {
-  background: rgba(18, 23, 34, 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+.btn-amazon-primary:hover {
+  background: #f7ca00;
+  border-color: #f2c200;
 }
 
-.bg-glass-card {
-  background: linear-gradient(135deg, rgba(28, 36, 51, 0.7) 0%, rgba(18, 23, 34, 0.85) 100%);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+.btn-amazon-secondary {
+  background: #ffa41c;
+  border: 1px solid #ff8f00;
+  border-radius: 9999px;
+  color: #0f1111;
+  font-weight: 500;
+  box-shadow: 0 2px 5px rgba(213, 217, 217, 0.5);
+  transition: background 0.15s ease-in-out;
 }
 
-.bg-glass-card:hover {
-  border-color: rgba(230, 0, 18, 0.35);
-  box-shadow: 0 10px 30px -10px rgba(230, 0, 18, 0.15);
+.btn-amazon-secondary:hover {
+  background: #fa8900;
 }
 
-/* Custom Scrollbars */
-::-webkit-scrollbar {
-  width: 7px;
-  height: 7px;
+.btn-amazon-outline {
+  background: #ffffff;
+  border: 1px solid #d5d9d9;
+  border-radius: 9999px;
+  color: #0f1111;
+  font-weight: 500;
+  box-shadow: 0 2px 5px rgba(213, 217, 217, 0.5);
+  transition: background 0.15s ease-in-out;
 }
 
-::-webkit-scrollbar-track {
-  background: #0a0d14;
+.btn-amazon-outline:hover {
+  background: #f7fafa;
+  border-color: #d5d9d9;
 }
 
-::-webkit-scrollbar-thumb {
-  background: #2a3547;
+/* Amazon Card Standard */
+.amazon-card {
+  background-color: #ffffff;
+  border: 1px solid #e7e7e7;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.amazon-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Horizontal Scrollbar */
+.horizontal-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #c1c1c1 #f1f1f1;
+}
+
+.horizontal-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+
+.horizontal-scroll::-webkit-scrollbar-track {
+  background: #f1f1f1;
   border-radius: 4px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #e60012;
+.horizontal-scroll::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.horizontal-scroll::-webkit-scrollbar-thumb:hover {
+  background: #999999;
 }

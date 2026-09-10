@@ -59,14 +59,64 @@ export interface InquiryWithDetails extends Inquiry {
   part?: Part | null;
 }
 
+export interface CarModel {
+  id: string;
+  name: string;
+  tagline: string;
+  price_guide: string;
+  specs: {
+    engine: string;
+    transmission: string;
+    power: string;
+    fuel_economy: string;
+    drive_type: string;
+  };
+  features: string[];
+  image_url: string;
+  gallery: string[];
+  description: string;
+  created_at?: string;
+}
+
+export interface NewsArticle {
+  id: string;
+  title: string;
+  category: string;
+  summary: string;
+  content: string;
+  image_url: string;
+  published_at: string;
+}
+
+export interface ForumThread {
+  id: string;
+  title: string;
+  content: string;
+  author_name: string;
+  author_id?: string | null;
+  category: string;
+  replies_count: number;
+  likes_count: number;
+  created_at: string;
+}
+
+export interface ForumReply {
+  id: string;
+  thread_id: string;
+  author_name: string;
+  author_id?: string | null;
+  content: string;
+  created_at: string;
+}
+
 export interface ContentPost {
   id: string;
   title: string;
   video_url: string;
   caption?: string | null;
   published_at: string;
-  created_by?: string | null;
-  created_at: string;
+  created_by?: string;
+  created_at?: string;
 }
 
 export interface DealerSettings {
@@ -85,18 +135,17 @@ export const SUZUKI_MODELS = [
   "Swift Sport",
   "Jimny (3-Door)",
   "Jimny (5-Door)",
-  "Grand Vitara",
+  "Grand Vitara AllGrip Hybrid",
+  "Fronx Turbo",
   "Baleno",
   "Brezza",
   "Ertiga",
   "XL6",
-  "Fronx",
-  "Alto",
-  "Alto K10",
+  "S-Presso",
   "Celerio",
+  "Alto K10",
   "Ignis",
   "S-Cross",
-  "Ciaz",
 ] as const;
 
 export const PART_CATEGORIES = [
@@ -105,8 +154,7 @@ export const PART_CATEGORIES = [
   "Electrical & Lighting",
   "Suspension & Steering",
   "Brakes & Wheels",
-  "Interior & Trim",
-  "Maintenance & Fluids",
+  "Interior & Accessories",
 ] as const;
 
 export const STANDING_CONDITION_DISCLAIMER =
