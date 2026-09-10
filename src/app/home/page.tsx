@@ -5,6 +5,8 @@ import { HeroSlider } from "@/components/customer/HeroSlider";
 import { CategoryIconsGrid } from "@/components/customer/CategoryIconsGrid";
 import { ProductRail } from "@/components/customer/ProductRail";
 import { DealOfTheDay } from "@/components/customer/DealOfTheDay";
+import { EnquireButton } from "@/components/customer/EnquireButton";
+import { getGuestInquiryRecords } from "@/lib/inquiries";
 import { STANDING_CONDITION_DISCLAIMER, PART_CATEGORIES } from "@/lib/types";
 import type { Part, CarModel, NewsArticle, ForumThread } from "@/lib/types";
 import {
@@ -16,7 +18,6 @@ import {
   Wrench,
   Compass,
   MapPin,
-  Send,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -84,9 +85,11 @@ export default async function HomeFeedPage({ searchParams }: HomeFeedProps) {
   const threads = (rawThreads as ForumThread[]) || [];
 
   // Inquiries count for navbar badge
-  const { count: inquiryCount } = (supabase && profile)
+  const { count: userInquiryCount } = (supabase && profile)
     ? await supabase.from("inquiries").select("id", { count: "exact", head: true }).eq("customer_id", profile.id)
     : { count: 0 };
+  const guestRecords = await getGuestInquiryRecords();
+  const inquiryCount = profile ? (userInquiryCount || 0) : guestRecords.length;
 
   const isFiltered = Boolean(q || (category && category !== "All") || (model && model !== "All"));
 
@@ -609,13 +612,13 @@ export default async function HomeFeedPage({ searchParams }: HomeFeedProps) {
                     </div>
 
                     <div className="grid grid-cols-2 gap-1.5">
-                      <Link
-                        href={`/parts/${p.id}#enquire`}
-                        className="py-1.5 px-2 rounded-full btn-amazon-primary text-[11px] font-bold text-[#0f1111] text-center shadow-xs hover:shadow transition-all flex items-center justify-center gap-1"
-                      >
-                        <Send className="w-3 h-3" />
-                        <span>Enquire</span>
-                      </Link>
+                      <EnquireButton
+                        partId={p.id}
+                        partName={p.name}
+                        partPrice={Number(p.price || 0)}
+                        label="Enquire"
+                        className="py-1.5 px-2 rounded-full btn-amazon-primary text-[11px] font-bold text-[#0f1111] text-center shadow-xs hover:shadow transition-all flex items-center justify-center gap-1 cursor-pointer"
+                      />
                       <Link
                         href={`/parts/${p.id}`}
                         className="py-1.5 px-2 rounded-full bg-[#f0f2f2] hover:bg-[#e3e6e6] border border-[#d5d9d9] text-[11px] font-semibold text-[#0f1111] text-center transition-all"

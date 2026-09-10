@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { signOut } from "@/app/auth/actions";
 import type { Profile } from "@/lib/types";
 import { PART_CATEGORIES } from "@/lib/types";
@@ -44,6 +44,33 @@ export function CustomerNavbar({
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [clientInquiryCount, setClientInquiryCount] = useState<number | null>(null);
+  const currentInquiryCount = clientInquiryCount !== null ? clientInquiryCount : inquiryCount;
+
+  useEffect(() => {
+    const fetchCount = async () => {
+      try {
+        const res = await fetch("/api/inquiries");
+        if (res.ok) {
+          const data = await res.json();
+          if (typeof data.count === "number") {
+            setClientInquiryCount(data.count);
+          }
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    fetchCount();
+
+    const handleUpdate = () => {
+      fetchCount();
+    };
+
+    window.addEventListener("inquiries-updated", handleUpdate);
+    return () => window.removeEventListener("inquiries-updated", handleUpdate);
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,7 +198,7 @@ export function CustomerNavbar({
             className="hidden sm:flex flex-col leading-tight p-1.5 hover:outline hover:outline-1 hover:outline-white rounded transition-all"
           >
             <span className="text-[11px] text-[#cccccc]">Past Requests</span>
-            <span className="font-bold text-white text-xs">& Inquiries ({inquiryCount})</span>
+            <span className="font-bold text-white text-xs">& Inquiries ({currentInquiryCount})</span>
           </Link>
 
           {/* Garage Counter Widget */}
@@ -265,7 +292,7 @@ export function CustomerNavbar({
             className="inline-flex items-center gap-1 px-2 py-1 text-[#ffffff] hover:outline hover:outline-1 hover:outline-white rounded font-medium"
           >
             <Inbox className="w-3.5 h-3.5" />
-            <span>My Inquiries</span>
+            <span>My Inquiries{currentInquiryCount > 0 ? ` (${currentInquiryCount})` : ""}</span>
           </Link>
         </div>
 
@@ -480,7 +507,7 @@ export function CustomerNavbar({
                       className="flex items-center gap-2.5 p-2 rounded hover:bg-[#f3f3f3] text-[#0f1111]"
                     >
                       <Inbox className="w-4 h-4 text-[#007185]" />
-                      <span>My Inquiries & Transactions</span>
+                      <span>My Inquiries & Transactions{currentInquiryCount > 0 ? ` (${currentInquiryCount})` : ""}</span>
                     </Link>
                   </li>
                   <li>

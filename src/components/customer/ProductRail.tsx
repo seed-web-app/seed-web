@@ -2,8 +2,9 @@
 
 import { useRef } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Star, AlertTriangle, Send } from "lucide-react";
+import { ChevronLeft, ChevronRight, Star, AlertTriangle } from "lucide-react";
 import type { Part } from "@/lib/types";
+import { EnquireButton } from "@/components/customer/EnquireButton";
 
 interface ProductRailProps {
   title: string;
@@ -151,13 +152,13 @@ export function ProductRail({ title, subtitle, parts, viewAllLink }: ProductRail
                 </div>
 
                 <div className="grid grid-cols-2 gap-1.5">
-                  <Link
-                    href={`/parts/${part.id}#enquire`}
-                    className="py-1.5 px-2 rounded-full btn-amazon-primary text-[11px] font-bold text-[#0f1111] text-center shadow-xs hover:shadow transition-all flex items-center justify-center gap-1"
-                  >
-                    <Send className="w-3 h-3" />
-                    <span>Enquire</span>
-                  </Link>
+                  <EnquireButton
+                    partId={part.id}
+                    partName={part.name}
+                    partPrice={Number(part.price || 0)}
+                    label="Enquire"
+                    className="py-1.5 px-2 rounded-full btn-amazon-primary text-[11px] font-bold text-[#0f1111] text-center shadow-xs hover:shadow transition-all flex items-center justify-center gap-1 cursor-pointer"
+                  />
 
                   <Link
                     href={`/parts/${part.id}`}

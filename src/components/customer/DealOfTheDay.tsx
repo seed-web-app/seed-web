@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Clock, Sparkles, Send, ShieldCheck, ArrowRight } from "lucide-react";
+import { Clock, Sparkles, ShieldCheck, ArrowRight } from "lucide-react";
 import type { Part } from "@/lib/types";
+import { EnquireButton } from "@/components/customer/EnquireButton";
 
 interface DealOfTheDayProps {
   dealPart?: Part | null;
@@ -83,13 +84,13 @@ export function DealOfTheDay({ dealPart }: DealOfTheDayProps) {
           </div>
 
           <div className="flex items-center gap-3 pt-1">
-            <Link
-              href={`/parts/${dealPart.id}#enquire`}
-              className="px-6 py-2.5 rounded-full btn-amazon-primary text-xs sm:text-sm font-bold text-[#0f1111] shadow-md hover:shadow-lg transition-all flex items-center gap-1.5"
-            >
-              <Send className="w-4 h-4" />
-              <span>Enquire Deal Price</span>
-            </Link>
+            <EnquireButton
+              partId={dealPart.id}
+              partName={dealPart.name}
+              partPrice={Number(dealPart.price)}
+              label="Enquire Deal Price"
+              className="px-6 py-2.5 rounded-full btn-amazon-primary text-xs sm:text-sm font-bold text-[#0f1111] shadow-md hover:shadow-lg transition-all flex items-center gap-1.5 cursor-pointer"
+            />
 
             <Link
               href={`/parts/${dealPart.id}`}
