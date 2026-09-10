@@ -20,7 +20,7 @@ export function EnquireButton({
   partPrice,
   className = "",
   label = "Enquire",
-  redirectToPortal = true,
+  redirectToPortal = false,
   showIcon = true,
 }: EnquireButtonProps) {
   const router = useRouter();
@@ -44,25 +44,32 @@ export function EnquireButton({
 
       if (res.ok) {
         setAdded(true);
-        // Dispatch event so Navbar immediately updates its inquiry counter
+        // Dispatch event so Navbar, BottomBar, and Toast immediately update
         if (typeof window !== "undefined") {
-          window.dispatchEvent(new CustomEvent("inquiries-updated", { detail: { partId } }));
+          window.dispatchEvent(
+            new CustomEvent("inquiries-updated", {
+              detail: { partId, partName, partPrice },
+            })
+          );
         }
 
         if (redirectToPortal) {
-          // Direct navigation to the Enquiry Portal showing the newly added part!
           router.push(`/profile?added=${encodeURIComponent(partId)}#inquiries`);
           return;
         }
 
-        setTimeout(() => setAdded(false), 2500);
+        // Keep added status displayed for 3 seconds then revert to neutral active state
+        setTimeout(() => setAdded(false), 3500);
       } else {
-        // Fallback: navigate to part page or profile directly
-        router.push(`/profile?added=${encodeURIComponent(partId)}#inquiries`);
+        if (redirectToPortal) {
+          router.push(`/profile?added=${encodeURIComponent(partId)}#inquiries`);
+        }
       }
     } catch (err) {
       console.error("Enquiry error:", err);
-      router.push(`/profile?added=${encodeURIComponent(partId)}#inquiries`);
+      if (redirectToPortal) {
+        router.push(`/profile?added=${encodeURIComponent(partId)}#inquiries`);
+      }
     } finally {
       setLoading(false);
     }
@@ -76,7 +83,11 @@ export function EnquireButton({
       type="button"
       onClick={handleEnquire}
       disabled={loading}
-      className={className || defaultClasses}
+      className={
+        added
+          ? "py-1.5 px-3 rounded-full bg-[#e6f4ea] text-[#137333] border border-[#ceead6] text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-xs transition-all scale-[1.02]"
+          : className || defaultClasses
+      }
       title={`Add ${partName || "part"} to your dealership quotation inquiry portal`}
     >
       {loading ? (
@@ -86,8 +97,8 @@ export function EnquireButton({
         </>
       ) : added ? (
         <>
-          <Check className="w-3.5 h-3.5 text-[#007600]" />
-          <span>In Portal ✓</span>
+          <Check className="w-3.5 h-3.5 text-[#137333]" />
+          <span>Added ✓</span>
         </>
       ) : (
         <>

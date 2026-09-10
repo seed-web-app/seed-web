@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { signOut } from "@/app/auth/actions";
-import type { Profile } from "@/lib/types";
+import type { Profile, Part } from "@/lib/types";
 import { PART_CATEGORIES } from "@/lib/types";
+import { getOptimizedImageUrl } from "@/lib/images";
 import {
   MapPin,
   Search,
@@ -27,6 +28,7 @@ import {
   Phone,
   User,
   ChevronRight,
+  Loader2,
 } from "lucide-react";
 
 interface CustomerNavbarProps {
@@ -46,6 +48,11 @@ export function CustomerNavbar({
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [clientInquiryCount, setClientInquiryCount] = useState<number | null>(null);
   const currentInquiryCount = clientInquiryCount !== null ? clientInquiryCount : inquiryCount;
+
+  const [suggestions, setSuggestions] = useState<Part[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchCount = async () => {
@@ -72,8 +79,55 @@ export function CustomerNavbar({
     return () => window.removeEventListener("inquiries-updated", handleUpdate);
   }, []);
 
+  // Debounced live autocomplete search
+  useEffect(() => {
+    const trimmed = searchTerm.trim();
+    const timer = setTimeout(async () => {
+      if (!trimmed) {
+        setSuggestions([]);
+        return;
+      }
+
+      setIsSearching(true);
+      try {
+        const params = new URLSearchParams();
+        params.set("q", trimmed);
+        if (selectedCategory && selectedCategory !== "All") {
+          params.set("category", selectedCategory);
+        }
+        const res = await fetch(`/api/parts/search?${params.toString()}`);
+        if (res.ok) {
+          const data = await res.json();
+          setSuggestions(data.parts || []);
+        }
+      } catch {
+        // ignore
+      } finally {
+        setIsSearching(false);
+      }
+    }, trimmed ? 140 : 0);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, selectedCategory]);
+
+  // Close search suggestions on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(e.target as Node)
+      ) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    setShowSuggestions(false);
     const params = new URLSearchParams();
     if (searchTerm.trim()) params.set("q", searchTerm.trim());
     if (selectedCategory && selectedCategory !== "All")
@@ -116,43 +170,135 @@ export function CustomerNavbar({
           </div>
         </div>
 
-        {/* Big Amazon Search Bar */}
-        <form
-          onSubmit={handleSearch}
-          className="flex-1 max-w-3xl flex items-center h-10 rounded-md overflow-hidden bg-white focus-within:ring-2 focus-within:ring-[#f08804]"
-        >
-          {/* Category Dropdown */}
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="h-full bg-[#f3f3f3] hover:bg-[#dadada] text-[#555555] text-xs px-2.5 border-r border-[#cdcdcd] focus:outline-none cursor-pointer hidden sm:block"
+        {/* Big Amazon Search Bar with Live Autocomplete */}
+        <div ref={searchContainerRef} className="relative flex-1 max-w-3xl">
+          <form
+            onSubmit={handleSearch}
+            className="flex items-center h-10 rounded-md overflow-hidden bg-white focus-within:ring-2 focus-within:ring-[#f08804]"
           >
-            <option value="All">All Categories</option>
-            {PART_CATEGORIES.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
+            {/* Category Dropdown */}
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="h-full bg-[#f3f3f3] hover:bg-[#dadada] text-[#555555] text-xs px-2.5 border-r border-[#cdcdcd] focus:outline-none cursor-pointer hidden sm:block"
+            >
+              <option value="All">All Categories</option>
+              {PART_CATEGORIES.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
 
-          {/* Search Input */}
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search genuine Suzuki parts, bumpers, Swift, Jimny..."
-            className="flex-1 px-3.5 text-[#0f1111] text-xs sm:text-sm focus:outline-none placeholder:text-[#555555]"
-          />
+            {/* Search Input */}
+            <input
+              type="text"
+              value={searchTerm}
+              onFocus={() => setShowSuggestions(true)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setShowSuggestions(true);
+              }}
+              placeholder="Search genuine Suzuki parts, bumpers, Swift, Jimny..."
+              className="flex-1 px-3.5 text-[#0f1111] text-xs sm:text-sm focus:outline-none placeholder:text-[#555555]"
+            />
 
-          {/* Golden Search Button */}
-          <button
-            type="submit"
-            aria-label="Search"
-            className="h-full px-4 bg-[#febd69] hover:bg-[#f3a847] text-[#111111] flex items-center justify-center transition-colors cursor-pointer"
-          >
-            <Search className="w-5 h-5 stroke-[2.5]" />
-          </button>
-        </form>
+            {/* Golden Search Button */}
+            <button
+              type="submit"
+              aria-label="Search"
+              className="h-full px-4 bg-[#febd69] hover:bg-[#f3a847] text-[#111111] flex items-center justify-center transition-colors cursor-pointer"
+            >
+              {isSearching ? (
+                <Loader2 className="w-5 h-5 animate-spin text-[#111111]" />
+              ) : (
+                <Search className="w-5 h-5 stroke-[2.5]" />
+              )}
+            </button>
+          </form>
+
+          {/* Live Autocomplete Suggestions Dropdown */}
+          {showSuggestions && searchTerm.trim().length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#d5d9d9] rounded-lg shadow-2xl overflow-hidden z-50 animate-in fade-in duration-150">
+              {suggestions.length > 0 ? (
+                <div className="py-1 divide-y divide-[#f0f0f0]">
+                  <div className="px-3 py-1.5 bg-[#f7fafa] flex items-center justify-between text-[11px] text-[#565959] font-medium">
+                    <span>Suzuki Genuine Catalog Matches</span>
+                    <span>{suggestions.length} items</span>
+                  </div>
+
+                  <div className="max-h-80 overflow-y-auto">
+                    {suggestions.map((part) => (
+                      <Link
+                        key={part.id}
+                        href={`/parts/${part.id}`}
+                        onClick={() => setShowSuggestions(false)}
+                        className="flex items-center gap-3 px-3 py-2 hover:bg-[#f3f8f8] transition-colors group"
+                      >
+                        <div className="w-10 h-10 rounded bg-[#f7f7f7] border border-[#e7e7e7] p-1 flex-shrink-0 flex items-center justify-center overflow-hidden">
+                          {part.photos && part.photos[0] ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={getOptimizedImageUrl(part.photos[0], 80, 75)}
+                              alt={part.name}
+                              loading="lazy"
+                              decoding="async"
+                              className="max-h-full max-w-full object-contain"
+                            />
+                          ) : (
+                            <Wrench className="w-4 h-4 text-[#888888]" />
+                          )}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-[#0f1111] group-hover:text-[#007185] truncate">
+                            {part.name}
+                          </p>
+                          <div className="flex items-center gap-2 text-[10px] text-[#565959] mt-0.5">
+                            <span className="px-1.5 py-0.2 bg-[#f0f2f2] rounded text-[#0f1111] font-semibold">
+                              {part.category}
+                            </span>
+                            {part.part_number && (
+                              <span>OEM: {part.part_number}</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="text-right flex-shrink-0">
+                          <span className="text-xs font-bold text-[#b12704] block">
+                            Rs {Number(part.price || 0).toLocaleString()}
+                          </span>
+                          <span className="text-[9px] text-[#007600] font-semibold">
+                            In Stock
+                          </span>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+
+                  <div className="p-2 bg-[#fcfcfc] text-center">
+                    <button
+                      type="button"
+                      onClick={handleSearch}
+                      className="text-xs font-bold text-[#007185] hover:text-[#c7511f] hover:underline"
+                    >
+                      View all catalog results for &ldquo;{searchTerm}&rdquo; →
+                    </button>
+                  </div>
+                </div>
+              ) : !isSearching ? (
+                <div className="p-4 text-center text-xs text-[#565959]">
+                  No matching parts found for &ldquo;{searchTerm}&rdquo;. Try &ldquo;bumper&rdquo;, &ldquo;Swift&rdquo;, or &ldquo;Jimny&rdquo;.
+                </div>
+              ) : (
+                <div className="p-4 text-center text-xs text-[#565959] flex items-center justify-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-[#f08804]" />
+                  <span>Searching Suzuki parts catalog...</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Right Navigation Actions */}
         <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">

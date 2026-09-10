@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
 import { IOSBottomTabBar } from "@/components/customer/IOSBottomTabBar";
+import { EnquiryToast } from "@/components/customer/EnquiryToast";
+import { FloatingWhatsAppDesk } from "@/components/customer/FloatingWhatsAppDesk";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -28,6 +30,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en">
       <body className="bg-amazon-bg text-amazon-text min-h-screen selection:bg-amazon-yellow selection:text-black pb-16 md:pb-0">
         {children}
+        <EnquiryToast />
+        <FloatingWhatsAppDesk />
         <IOSBottomTabBar />
       </body>
     </html>

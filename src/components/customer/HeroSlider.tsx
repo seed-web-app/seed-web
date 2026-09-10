@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, ArrowRight, Sparkles } from "lucide-react";
+import { getOptimizedImageUrl } from "@/lib/images";
 
 interface Slide {
   id: number;
@@ -93,8 +94,9 @@ export function HeroSlider() {
       <div className="relative h-[280px] sm:h-[360px] md:h-[420px] lg:h-[460px] w-full bg-[#131921]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={current.imageUrl}
+          src={getOptimizedImageUrl(current.imageUrl, 1200, 75)}
           alt={current.title}
+          decoding="async"
           className="absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-700 opacity-80"
         />
 

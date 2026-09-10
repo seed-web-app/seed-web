@@ -5,7 +5,8 @@ import { CustomerNavbar } from "@/components/customer/Navbar";
 import { PartGallery } from "@/components/customer/PartGallery";
 import { ProductRail } from "@/components/customer/ProductRail";
 import { submitPartInquiry } from "./actions";
-import type { Part } from "@/lib/types";
+import { getCachedPartById, getCachedParts } from "@/lib/catalog";
+import { getGuestInquiryRecords } from "@/lib/inquiries";
 import { STANDING_CONDITION_DISCLAIMER } from "@/lib/types";
 import {
   AlertTriangle,
@@ -35,44 +36,42 @@ export default async function PartDetailPage({
   params,
   searchParams,
 }: PartDetailPageProps) {
-  const profile = await getCurrentProfile();
-  const vehicles = profile ? await getUserVehicles(profile.id) : [];
-  const supabase = await createSupabaseServerClient();
-
-  if (!supabase) {
-    notFound();
-  }
-
   const { id } = await params;
   const { requested, error } = await searchParams;
 
-  const { data: partData, error: partError } = await supabase
-    .from("parts")
-    .select("*")
-    .eq("id", id)
-    .single();
+  // Run cached part lookup, all parts, profile and guest inquiries in parallel
+  const [part, allParts, profile, guestRecords] = await Promise.all([
+    getCachedPartById(id),
+    getCachedParts(),
+    getCurrentProfile(),
+    getGuestInquiryRecords(),
+  ]);
 
-  if (partError || !partData) {
+  if (!part) {
     notFound();
   }
 
-  const part = partData as Part;
+  const supabase = profile ? await createSupabaseServerClient() : null;
 
-  // Fetch related parts in the same category
-  const { data: rawRelated } = await supabase
-    .from("parts")
-    .select("*")
-    .eq("category", part.category)
-    .neq("id", part.id)
-    .limit(8);
-  const relatedParts = (rawRelated as Part[]) || [];
+  const [vehicles, userInquiryCount] = profile
+    ? await Promise.all([
+        getUserVehicles(profile.id),
+        supabase
+          ? supabase
+              .from("inquiries")
+              .select("id", { count: "exact", head: true })
+              .eq("customer_id", profile.id)
+              .then((res) => res.count || 0)
+          : Promise.resolve(0),
+      ])
+    : [[], 0];
 
-  const { count: inquiryCount } = (supabase && profile)
-    ? await supabase
-        .from("inquiries")
-        .select("id", { count: "exact", head: true })
-        .eq("customer_id", profile.id)
-    : { count: 0 };
+  const inquiryCount = profile ? userInquiryCount : guestRecords.length;
+
+  // Instant in-memory related parts
+  const relatedParts = allParts
+    .filter((p) => p.category === part.category && p.id !== part.id)
+    .slice(0, 8);
 
   return (
     <div className="min-h-screen bg-[#eaeded] flex flex-col font-sans selection:bg-[#ffd814] selection:text-black">

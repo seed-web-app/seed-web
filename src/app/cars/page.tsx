@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { getCurrentProfile, getUserVehicles, createSupabaseServerClient } from "@/lib/supabase/server";
+import { getCurrentProfile, getUserVehicles } from "@/lib/supabase/server";
 import { CustomerNavbar } from "@/components/customer/Navbar";
-import type { CarModel } from "@/lib/types";
+import { getCachedCars } from "@/lib/catalog";
+import { getOptimizedImageUrl } from "@/lib/images";
 import {
   Car,
   CheckCircle2,
@@ -13,15 +14,11 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function CarsShowcasePage() {
-  const profile = await getCurrentProfile();
+  const [profile, cars] = await Promise.all([
+    getCurrentProfile(),
+    getCachedCars(),
+  ]);
   const vehicles = profile ? await getUserVehicles(profile.id) : [];
-  const supabase = await createSupabaseServerClient();
-
-  const { data: rawCars } = supabase
-    ? await supabase.from("car_models").select("*").order("name")
-    : { data: [] };
-
-  const cars = (rawCars as CarModel[]) || [];
 
   return (
     <div className="min-h-screen bg-[#eaeded] flex flex-col font-sans selection:bg-[#ffd814] selection:text-black">
@@ -56,8 +53,10 @@ export default async function CarsShowcasePage() {
                 <div className="aspect-[16/10] bg-[#f7f7f7] rounded-lg overflow-hidden relative mb-4">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={car.image_url}
+                    src={getOptimizedImageUrl(car.image_url, 600, 75)}
                     alt={car.name}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute bottom-3 right-3 bg-[#131921]/90 backdrop-blur-md px-3 py-1 rounded text-white text-xs font-bold">

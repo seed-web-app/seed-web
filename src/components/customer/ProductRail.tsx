@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight, Star, AlertTriangle } from "lucide-react";
 import type { Part } from "@/lib/types";
 import { EnquireButton } from "@/components/customer/EnquireButton";
+import { getOptimizedImageUrl } from "@/lib/images";
 
 interface ProductRailProps {
   title: string;
@@ -89,8 +90,10 @@ export function ProductRail({ title, subtitle, parts, viewAllLink }: ProductRail
                   {part.photos && part.photos[0] ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={part.photos[0]}
+                      src={getOptimizedImageUrl(part.photos[0], 360, 75)}
                       alt={part.name}
+                      loading="lazy"
+                      decoding="async"
                       className="max-h-full max-w-full object-contain transition-transform hover:scale-105 duration-300"
                     />
                   ) : (

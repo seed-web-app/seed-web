@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Clock, Sparkles, ShieldCheck, ArrowRight } from "lucide-react";
 import type { Part } from "@/lib/types";
 import { EnquireButton } from "@/components/customer/EnquireButton";
+import { getOptimizedImageUrl } from "@/lib/images";
 
 interface DealOfTheDayProps {
   dealPart?: Part | null;
@@ -111,8 +112,10 @@ export function DealOfTheDay({ dealPart }: DealOfTheDayProps) {
             {dealPart.photos && dealPart.photos[0] ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={dealPart.photos[0]}
+                src={getOptimizedImageUrl(dealPart.photos[0], 500, 80)}
                 alt={dealPart.name}
+                loading="lazy"
+                decoding="async"
                 className="max-h-full max-w-full object-contain"
               />
             ) : (
