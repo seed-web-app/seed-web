@@ -62,7 +62,7 @@ export function QuickFilterBar() {
       {/* 1. Model Selector Strip */}
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-1.5 text-xs font-bold text-[#0f1111] flex-shrink-0 mr-1">
-          <Car className="w-4 h-4 text-[#febd69]" />
+          <Car className="w-4 h-4 text-[#e30613]" />
           <span className="hidden sm:inline">Filter by</span> Model:
         </div>
 
@@ -79,11 +79,11 @@ export function QuickFilterBar() {
                 onClick={() => handleModelChange(model)}
                 className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1 active:scale-95 ${
                   isActive
-                    ? "bg-[#ffd814] text-[#0f1111] border border-[#fcd200] shadow-xs font-bold"
+                    ? "bg-[#e30613] text-white border border-[#e30613] shadow-xs font-bold"
                     : "bg-[#f0f2f2] text-[#0f1111] hover:bg-[#e3e6e6] border border-transparent"
                 }`}
               >
-                {isActive && <Check className="w-3 h-3 text-[#0f1111]" />}
+                {isActive && <Check className="w-3 h-3 text-white" />}
                 <span>{model === "All" ? "All Models" : model}</span>
               </button>
             );
@@ -108,7 +108,7 @@ export function QuickFilterBar() {
               onClick={() => handleCategoryChange(cat.value)}
               className={`px-2.5 py-1 rounded-lg text-xs whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 ${
                 isCatActive
-                  ? "bg-[#131921] text-white font-bold shadow-xs"
+                  ? "bg-[#171a1f] text-white font-bold shadow-xs"
                   : "bg-white text-[#565959] hover:text-[#0f1111] hover:bg-[#f7f7f7] border border-[#d5d9d9]"
               }`}
             >

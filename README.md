@@ -57,11 +57,11 @@ DATABASE_URL="postgresql://postgres:[PASSWORD]@db.[PROJECT-REF].supabase.co:5432
 ```
 
 ### 3. Run Supabase Migrations
-Apply the complete migration script located in `supabase/migrations/20260910000001_suzuki_network.sql`:
+Apply every migration in `supabase/migrations` in timestamp order. With the Supabase CLI linked to the project:
 ```bash
-psql "$DATABASE_URL" -f supabase/migrations/20260910000001_suzuki_network.sql
+supabase db push
 ```
-*(Or copy the file contents into the Supabase SQL Editor in your Supabase Dashboard).*
+Alternatively, run each SQL file against `DATABASE_URL` in filename order or paste them into the Supabase SQL Editor in that order.
 
 ### 4. Start Local Development Server
 ```bash

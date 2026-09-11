@@ -8,16 +8,14 @@ import { FloatingWhatsAppDesk } from "@/components/customer/FloatingWhatsAppDesk
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
   viewportFit: "cover",
-  themeColor: "#131921",
+  themeColor: "#171a1f",
 };
 
 export const metadata: Metadata = {
-  title: "Suzuki Mauritius | Customer Network & Auto-Parts Marketplace",
+  title: "Suzuki Mauritius | Parts & Owner Network",
   description:
-    "Official customer network for Suzuki owners in Mauritius. Genuine parts catalog, vehicle showcase, technical car care news, and owner community forum.",
+    "Private customer network for Suzuki owners in Mauritius. Browse genuine parts, manage vehicles, and send dealer inquiries without online checkout.",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -28,7 +26,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body className="bg-amazon-bg text-amazon-text min-h-screen selection:bg-amazon-yellow selection:text-black pb-16 md:pb-0">
+      <body className="bg-amazon-bg text-amazon-text min-h-screen pb-16 md:pb-0">
         {children}
         <EnquiryToast />
         <FloatingWhatsAppDesk />

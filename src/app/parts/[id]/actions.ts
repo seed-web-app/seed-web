@@ -3,7 +3,6 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient, getCurrentProfile } from "@/lib/supabase/server";
-import { addGuestInquiryRecord } from "@/lib/inquiries";
 
 export async function submitPartInquiry(formData: FormData) {
   const profile = await getCurrentProfile();
@@ -15,25 +14,34 @@ export async function submitPartInquiry(formData: FormData) {
     redirect("/home");
   }
 
-  if (profile) {
-    const supabase = await createSupabaseServerClient();
-    if (supabase) {
-      const { error } = await supabase.from("inquiries").insert({
-        customer_id: profile.id,
-        part_id: partId,
-        vehicle_id: vehicleId && vehicleId !== "none" ? vehicleId : null,
-        message,
-        status: "new",
-      });
-
-      if (error) {
-        console.error("Failed to submit inquiry:", error);
-      }
-    }
+  if (!profile) {
+    redirect("/login");
   }
 
-  // Always record in cookie/guest store as well
-  await addGuestInquiryRecord(partId, message || undefined);
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) redirect(`/parts/${partId}?error=inquiry_failed#enquire`);
+
+  const { data: existing } = await supabase
+    .from("inquiries")
+    .select("id")
+    .eq("customer_id", profile.id)
+    .eq("part_id", partId)
+    .maybeSingle();
+
+  if (!existing) {
+    const { error } = await supabase.from("inquiries").insert({
+      customer_id: profile.id,
+      part_id: partId,
+      vehicle_id: vehicleId && vehicleId !== "none" ? vehicleId : null,
+      message,
+      status: "new",
+    });
+
+    if (error) {
+      console.error("Failed to submit inquiry:", error);
+      redirect(`/parts/${partId}?error=inquiry_failed#enquire`);
+    }
+  }
 
   revalidatePath(`/parts/${partId}`);
   revalidatePath("/profile");

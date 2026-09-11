@@ -74,7 +74,7 @@ export default async function ForumPage({ searchParams }: ForumPageProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-[#eaeded] flex flex-col font-sans selection:bg-[#ffd814] selection:text-black">
+    <div className="min-h-screen bg-[#f5f6f7] flex flex-col font-sans">
       <CustomerNavbar profile={profile} vehicleCount={vehicles.length} />
 
       <main className="flex-1 max-w-[1200px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-8 space-y-6">

@@ -102,12 +102,12 @@ export function HeroSlider() {
 
         {/* Gradient Overlay for Amazon Content Blend */}
         <div className="absolute inset-0 bg-gradient-to-r from-[#131921] via-[#131921]/75 to-transparent sm:w-2/3" />
-        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#eaeded] via-[#eaeded]/50 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#f5f6f7] via-[#f5f6f7]/50 to-transparent" />
 
         {/* Content Box */}
         <div className="relative z-10 h-full max-w-7xl mx-auto px-4 sm:px-8 flex flex-col justify-center max-w-2xl text-white pb-12 sm:pb-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#febd69] text-[#111111] text-[11px] font-extrabold uppercase tracking-wider mb-3 shadow-sm w-fit">
-            <Sparkles className="w-3.5 h-3.5 text-[#b12704]" />
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/90 text-[#17191d] text-[11px] font-extrabold uppercase tracking-wider mb-3 shadow-sm w-fit backdrop-blur-sm">
+            <Sparkles className="w-3.5 h-3.5 text-[#e30613]" />
             <span>{current.badge}</span>
           </div>
 
@@ -168,7 +168,7 @@ export function HeroSlider() {
             aria-label={`Go to slide ${i + 1}`}
             className={`transition-all rounded-full cursor-pointer ${
               currentIndex === i
-                ? "w-8 h-2.5 bg-[#f08804]"
+                ? "w-8 h-2.5 bg-[#e30613]"
                 : "w-2.5 h-2.5 bg-white/60 hover:bg-white"
             }`}
           />

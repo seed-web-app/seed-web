@@ -1,10 +1,11 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getCurrentProfile, getUserVehicles, createSupabaseServerClient } from "@/lib/supabase/server";
 import { CustomerNavbar } from "@/components/customer/Navbar";
 import { updateProfile, addVehicle, deleteVehicle } from "./actions";
 import { SUZUKI_MODELS } from "@/lib/types";
 import type { InquiryWithDetails, Part, Vehicle } from "@/lib/types";
-import { getGuestInquiriesWithDetails, syncGuestInquiriesToUser } from "@/lib/inquiries";
+import { syncGuestInquiriesToUser } from "@/lib/inquiries";
 import { InquiryRowActions } from "@/components/customer/InquiryRowActions";
 import {
   Car,
@@ -31,67 +32,26 @@ interface ProfilePageProps {
   }>;
 }
 
-// Sample demonstration transactions if user has 0 inquiries
-const DEMO_TRANSACTIONS = [
-  {
-    id: "demo-1",
-    txnCode: "TXN-MU-2026-8812",
-    date: "Sep 09, 2026",
-    partName: "Front Bumper Assembly (Factory Gray Primer)",
-    partNumber: "71711-53R00-799",
-    photo: "https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=600&q=80",
-    vehicleName: "2024 Suzuki Swift Sport 1.4L Boosterjet",
-    status: "quoted",
-    priceMur: 18500,
-    advisorName: "Arnaud L. (Phoenix Parts Desk)",
-    depot: "Phoenix Main Hub (Pickup Ready)",
-    message: "Need replacement front bumper for Swift Sport. Please confirm if it includes fog lamp bezels.",
-    adminNotes: "Unboxed and verified for surface trueness in gray electro-primer. Fog lamp bezels included. Ready for pickup or transfer to Phoenix AutoPaint.",
-  },
-  {
-    id: "demo-2",
-    txnCode: "TXN-MU-2026-6490",
-    date: "Sep 05, 2026",
-    partName: "Jimny JB74 Heavy-Duty Snorkel & Breather Kit",
-    partNumber: "99000-990YB-SNK",
-    photo: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=600&q=80",
-    vehicleName: "2023 Suzuki Jimny 1.5L AllGrip Pro",
-    status: "closed",
-    priceMur: 14200,
-    advisorName: "Dev K. (Port Louis Branch)",
-    depot: "Port Louis Harbour Branch",
-    message: "Preparing for Chamarel and Black River trail season. Confirm A-pillar template included.",
-    adminNotes: "Customer collected at Port Louis counter. Complete stainless hardware & cut template verified.",
-  },
-];
-
 export default async function ProfilePage({ searchParams }: ProfilePageProps) {
   const profile = await getCurrentProfile();
+  if (!profile) redirect("/login");
+
   const supabase = await createSupabaseServerClient();
   const { saved, error, added } = await searchParams;
 
-  let vehicles: Vehicle[] = [];
-  let inquiries: InquiryWithDetails[] = [];
+  // Preserve any requests made before guest access was removed.
+  await syncGuestInquiriesToUser(profile.id);
 
-  if (profile) {
-    // 1. Sync guest inquiries to user's DB records upon login
-    await syncGuestInquiriesToUser(profile.id);
+  const vehicles: Vehicle[] = await getUserVehicles(profile.id);
+  const { data: rawInquiries } = supabase
+    ? await supabase
+        .from("inquiries")
+        .select("*, part:parts(*), vehicle:vehicles(*)")
+        .eq("customer_id", profile.id)
+        .order("created_at", { ascending: false })
+    : { data: [] };
 
-    vehicles = await getUserVehicles(profile.id);
-
-    const { data: rawInquiries } = supabase
-      ? await supabase
-          .from("inquiries")
-          .select("*, part:parts(*), vehicle:vehicles(*)")
-          .eq("customer_id", profile.id)
-          .order("created_at", { ascending: false })
-      : { data: [] };
-
-    inquiries = (rawInquiries as InquiryWithDetails[]) || [];
-  } else {
-    // 2. Guest user: load cookie-persisted inquiries
-    inquiries = await getGuestInquiriesWithDetails();
-  }
+  const inquiries = (rawInquiries as InquiryWithDetails[]) || [];
 
   // If a part was just added, fetch its details to display the confirmation card
   let addedPart: Part | null = null;
@@ -109,7 +69,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
   const years = Array.from({ length: 30 }, (_, i) => currentYear - i);
 
   return (
-    <div className="min-h-screen bg-[#eaeded] flex flex-col font-sans selection:bg-[#ffd814] selection:text-black">
+    <div className="min-h-screen bg-[#f5f6f7] flex flex-col font-sans">
       <CustomerNavbar
         profile={profile}
         vehicleCount={vehicles.length}
@@ -235,7 +195,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                 <div className="amazon-card p-5 bg-white space-y-4 rounded-lg">
                   <div className="border-b border-[#f0f0f0] pb-3">
                     <h2 className="text-base font-bold text-[#0f1111]">Dealership Contact Details</h2>
-                    <p className="text-xs text-[#565959]">Used by parts specialists to confirm offline orders</p>
+                    <p className="text-xs text-[#565959]">Used by parts specialists to follow up on your requests</p>
                   </div>
 
                   <form action={updateProfile} className="space-y-3">
@@ -443,14 +403,14 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             )}
           </div>
 
-          {/* Right Column: Inquiries & Transaction Details (7 cols) */}
+          {/* Right Column: Part request details (7 cols) */}
           <div className="lg:col-span-7 space-y-6" id="inquiries">
             <div className="amazon-card p-5 bg-white space-y-4 rounded-lg">
               <div className="border-b border-[#f0f0f0] pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
                   <h2 className="text-base sm:text-lg font-bold text-[#0f1111] flex items-center gap-2">
                     <Clock className="w-5 h-5 text-[#f08804]" />
-                    <span>Enquiry Portal & Quotation Tracking</span>
+                    <span>Part Requests & Dealer Follow-up</span>
                   </h2>
                   <p className="text-xs text-[#565959]">
                     Official parts quotations, VIN verification & Phoenix warehouse collection
@@ -471,7 +431,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                     const isNew = inq.status === "new";
                     const isContacted = inq.status === "contacted";
                     const isClosed = inq.status === "closed";
-                    const txnCode = `TXN-MU-2026-${inq.id.replace("guest-inq-", "").substring(0, 6).toUpperCase()}`;
+                    const txnCode = `REQ-MU-${inq.id.replace("guest-inq-", "").substring(0, 6).toUpperCase()}`;
 
                     return (
                       <div
@@ -503,7 +463,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                                 ? "● Inquiry Logged (Review Pending)"
                                 : isContacted
                                 ? "● Dealer Quotation Dispatched"
-                                : "● Fulfilled & Collected"}
+                                : "● Request Closed"}
                             </span>
 
                             <InquiryRowActions inquiryId={inq.id} partId={inq.part_id} />
@@ -552,7 +512,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                               >
                                 {isClosed ? <Check className="w-3 h-3" /> : "4"}
                               </div>
-                              <span className="font-bold text-[#0f1111]">Pickup Ready</span>
+                              <span className="font-bold text-[#0f1111]">Request Closed</span>
                             </div>
                           </div>
                         </div>
@@ -638,135 +598,23 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                 </div>
               )}
 
-              {/* Demonstration Transaction Records Section (Shows when user has 0 inquiries as reference) */}
+              {/* Honest empty state: never show made-up customer activity. */}
               {inquiries.length === 0 && (
-                <div className="space-y-4">
-                  <div className="p-3.5 rounded bg-[#fff8e7] border border-[#fbd88e] text-xs text-[#855b00]">
-                    <strong>No active customer inquiries yet.</strong> Click <strong>&ldquo;Enquire&rdquo;</strong> on any product in the catalog to add it here. Below is an example of your official transaction quotation logs once you enquire:
+                <div className="rounded-2xl border border-[#e3e6e8] bg-[#f7f8f9] px-5 py-10 text-center">
+                  <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-[#e30613]/10 text-[#c90010]">
+                    <Send className="h-5 w-5" />
                   </div>
-
-                  {DEMO_TRANSACTIONS.map((txn) => (
-                    <div
-                      key={txn.id}
-                      className="p-5 rounded-lg border border-[#d5d9d9] bg-white space-y-4 shadow-xs"
-                    >
-                      {/* Transaction Header */}
-                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#f0f0f0] pb-3 text-xs">
-                        <div>
-                          <span className="font-mono font-bold text-[#0f1111] text-sm">
-                            {txn.txnCode}
-                          </span>
-                          <span className="text-[#565959] ml-2 text-[11px]">
-                            Logged on {txn.date}
-                          </span>
-                        </div>
-
-                        <span
-                          className={`px-2.5 py-1 rounded-full font-bold text-[11px] uppercase tracking-wider ${
-                            txn.status === "quoted"
-                              ? "bg-[#e8f4fd] text-[#007185] border border-[#b8ddf8]"
-                              : "bg-[#e7f4e4] text-[#2b8a3e] border border-[#b2d8b8]"
-                          }`}
-                        >
-                          {txn.status === "quoted"
-                            ? "● Official Quotation Dispatched"
-                            : "● Fulfilled & Collected at Depot"}
-                        </span>
-                      </div>
-
-                      {/* Stepper Status Bar */}
-                      <div className="py-2">
-                        <div className="grid grid-cols-4 gap-1 text-center text-[10px]">
-                          <div className="flex flex-col items-center">
-                            <div className="w-5 h-5 rounded-full bg-[#2b8a3e] text-white flex items-center justify-center font-bold mb-1">
-                              <Check className="w-3 h-3" />
-                            </div>
-                            <span className="font-bold text-[#0f1111]">Inquiry Logged</span>
-                          </div>
-
-                          <div className="flex flex-col items-center">
-                            <div className="w-5 h-5 rounded-full bg-[#2b8a3e] text-white flex items-center justify-center font-bold mb-1">
-                              <Check className="w-3 h-3" />
-                            </div>
-                            <span className="font-bold text-[#0f1111]">Fitment Checked</span>
-                          </div>
-
-                          <div className="flex flex-col items-center">
-                            <div className="w-5 h-5 rounded-full bg-[#2b8a3e] text-white flex items-center justify-center font-bold mb-1">
-                              <Check className="w-3 h-3" />
-                            </div>
-                            <span className="font-bold text-[#0f1111]">Quote Issued</span>
-                          </div>
-
-                          <div className="flex flex-col items-center">
-                            <div
-                              className={`w-5 h-5 rounded-full flex items-center justify-center font-bold mb-1 ${
-                                txn.status === "closed" ? "bg-[#2b8a3e] text-white" : "bg-[#f08804] text-white"
-                              }`}
-                            >
-                              {txn.status === "closed" ? <Check className="w-3 h-3" /> : "4"}
-                            </div>
-                            <span className="font-bold text-[#0f1111]">
-                              {txn.status === "closed" ? "Collected" : "Ready at Phoenix"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Part Details & Reference Quote */}
-                      <div className="flex items-start gap-4 p-3 bg-[#f7fafa] rounded-lg border border-[#e7e7e7]">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={txn.photo}
-                          alt={txn.partName}
-                          className="w-16 h-14 object-cover bg-white border rounded flex-shrink-0"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-bold text-xs sm:text-sm text-[#0f1111] leading-tight">
-                            {txn.partName}
-                          </h4>
-                          <p className="text-[11px] text-[#565959] mt-0.5">
-                            OEM #{txn.partNumber} • Verified Fitment: {txn.vehicleName}
-                          </p>
-                          <div className="mt-2 flex items-baseline gap-1.5">
-                            <span className="text-xs text-[#565959]">Dealership Reference Quote:</span>
-                            <span className="text-base font-extrabold text-[#b12704]">
-                              Rs {txn.priceMur.toLocaleString()}
-                            </span>
-                            <span className="text-[10px] text-[#565959]">MUR</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Advisor Note */}
-                      <div className="p-3 bg-[#e8f4fd] rounded border border-[#b8ddf8] text-xs space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-[#007185]">
-                            Advisor: {txn.advisorName}
-                          </span>
-                          <span className="text-[11px] text-[#565959]">
-                            {txn.depot}
-                          </span>
-                        </div>
-                        <p className="text-[#0f1111] text-[11px] leading-relaxed">
-                          {txn.adminNotes}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-
-                  <div className="p-4 rounded-lg bg-[#f0f2f2] border border-[#d5d9d9] text-center">
-                    <p className="text-xs text-[#565959] mb-3">
-                      Ready to enquire about genuine Suzuki parts?
-                    </p>
-                    <Link
-                      href="/home#all-parts"
-                      className="px-6 py-2.5 rounded-full btn-amazon-primary text-xs font-bold text-[#0f1111] inline-flex items-center gap-1.5 shadow-xs"
-                    >
-                      <Send className="w-3.5 h-3.5" />
-                      <span>Browse All 68 Parts & Enquire →</span>
-                    </Link>
-                  </div>
+                  <h3 className="text-sm font-bold text-[#17191d]">No part requests yet</h3>
+                  <p className="mx-auto mt-1 max-w-md text-xs leading-5 text-[#626870]">
+                    Browse the dealer catalog and send a request when you find a part you need. No payment is taken online.
+                  </p>
+                  <Link
+                    href="/home#all-parts"
+                    className="btn-amazon-primary mt-5 inline-flex items-center gap-1.5 px-5 py-2.5 text-xs"
+                  >
+                    <span>Browse available parts</span>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
                 </div>
               )}
             </div>

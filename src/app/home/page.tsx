@@ -117,7 +117,7 @@ export default async function HomeFeedPage({ searchParams }: HomeFeedProps) {
   const interiorParts = parts.filter((p) => p.category === "Interior & Accessories");
 
   return (
-    <div className="min-h-screen bg-[#eaeded] flex flex-col font-sans selection:bg-[#ffd814] selection:text-black">
+    <div id="top" className="min-h-screen bg-[#f5f6f7] flex flex-col font-sans">
       <CustomerNavbar
         profile={profile}
         vehicleCount={vehicles.length}
@@ -192,11 +192,11 @@ export default async function HomeFeedPage({ searchParams }: HomeFeedProps) {
         {/* 2. Amazon 4-in-1 Cards Section (When not filtered) */}
         {!isFiltered && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {/* Card 1: Shop Genuine Parts */}
+            {/* Card 1: Browse genuine parts */}
             <div className="amazon-card bg-white p-5 flex flex-col justify-between rounded-lg">
               <div>
                 <h3 className="text-base font-extrabold text-[#0f1111] mb-1">
-                  Shop Suzuki Parts by Category
+                  Browse Suzuki Parts by Category
                 </h3>
                 <p className="text-[11px] text-[#565959] mb-3">
                   Direct replacement OEM components
@@ -796,7 +796,7 @@ export default async function HomeFeedPage({ searchParams }: HomeFeedProps) {
       <footer className="w-full bg-[#232f3e] text-white text-xs">
         {/* Back to Top Button */}
         <a
-          href="#"
+          href="#top"
           className="block w-full py-3 bg-[#37475a] hover:bg-[#485769] text-center font-bold text-white text-xs transition-colors"
         >
           Back to top
@@ -917,7 +917,7 @@ export default async function HomeFeedPage({ searchParams }: HomeFeedProps) {
               S
             </div>
             <span className="font-bold text-white text-xs">suzuki.mu</span>
-            <span className="text-[#cccccc]">| Deliver to Mauritius 🇲🇺</span>
+            <span className="text-[#cccccc]">| Serving Mauritius 🇲🇺</span>
           </div>
           <p>© 2026 Authorized Suzuki Customer Network Mauritius. All rights reserved.</p>
           <p className="mt-1 text-[#777777]">

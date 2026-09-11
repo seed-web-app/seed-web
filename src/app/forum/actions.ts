@@ -72,20 +72,6 @@ export async function createForumReply(formData: FormData) {
     redirect("/forum?error=reply_failed");
   }
 
-  // 2. Increment replies count on thread
-  const { data: thread } = await supabase
-    .from("forum_threads")
-    .select("replies_count")
-    .eq("id", thread_id)
-    .single();
-
-  if (thread) {
-    await supabase
-      .from("forum_threads")
-      .update({ replies_count: (thread.replies_count || 0) + 1 })
-      .eq("id", thread_id);
-  }
-
   revalidatePath("/forum");
   revalidatePath("/home");
   redirect(`/forum?thread=${thread_id}&saved=reply_posted`);

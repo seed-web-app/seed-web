@@ -10,9 +10,9 @@ const config: Config = {
     extend: {
       colors: {
         amazon: {
-          header: "#131921",
-          subnav: "#232f3e",
-          bg: "#eaeded",
+          header: "#171a1f",
+          subnav: "#252a31",
+          bg: "#f5f6f7",
           card: "#ffffff",
           yellow: "#ffd814",
           yellowHover: "#f7ca00",
@@ -23,8 +23,8 @@ const config: Config = {
           blueHover: "#c7511f",
           deal: "#cc0c39",
           border: "#d5d9d9",
-          text: "#0f1111",
-          muted: "#565959",
+          text: "#17191d",
+          muted: "#626870",
           star: "#de7921",
           light: "#f7fafa",
         },
@@ -33,13 +33,14 @@ const config: Config = {
           darkred: "#9B000C",
           brightred: "#FF1F2F",
           black: "#131921",
+          carbon: "#171A1F",
           slate: "#232f3e",
+          muted: "#9CA3AF",
           primer: "#64748B",
         },
       },
       fontFamily: {
         sans: [
-          '"Amazon Ember"',
           "-apple-system",
           "BlinkMacSystemFont",
           '"Segoe UI"',

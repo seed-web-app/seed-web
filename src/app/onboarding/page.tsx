@@ -65,7 +65,7 @@ export default async function OnboardingPage({
                 ? "Please choose your vehicle model and manufacture year."
                 : error === "invalid_year"
                 ? "Please select a valid manufacture year."
-                : "Unable to register vehicle. Please try again."}
+                : "We could not save your vehicle. Nothing was lost—please try again."}
             </div>
           )}
 

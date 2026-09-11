@@ -29,6 +29,7 @@ import {
   User,
   ChevronRight,
   Loader2,
+  Video,
 } from "lucide-react";
 
 interface CustomerNavbarProps {
@@ -147,7 +148,7 @@ export function CustomerNavbar({
     >
       <form
         onSubmit={handleSearch}
-        className="flex items-center h-10 rounded-md overflow-hidden bg-white focus-within:ring-2 focus-within:ring-[#f08804] shadow-xs"
+        className="flex items-center h-10 rounded-xl overflow-hidden bg-white focus-within:ring-2 focus-within:ring-[#e30613]/40 shadow-sm"
       >
         {!isMobile && (
           <select
@@ -183,10 +184,10 @@ export function CustomerNavbar({
         <button
           type="submit"
           aria-label="Search"
-          className="h-full px-4 bg-[#febd69] hover:bg-[#f3a847] text-[#111111] flex items-center justify-center transition-colors cursor-pointer"
+          className="h-full px-4 bg-[#e30613] hover:bg-[#c90010] text-white flex items-center justify-center transition-colors cursor-pointer"
         >
           {isSearching ? (
-            <Loader2 className="w-5 h-5 animate-spin text-[#111111]" />
+            <Loader2 className="w-5 h-5 animate-spin text-white" />
           ) : (
             <Search className="w-5 h-5 stroke-[2.5]" />
           )}
@@ -227,7 +228,7 @@ export function CustomerNavbar({
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-[#0f1111] group-hover:text-[#007185] truncate">
+                      <p className="text-xs font-bold text-[#0f1111] group-hover:text-[#e30613] truncate">
                         {part.name}
                       </p>
                       <div className="flex items-center gap-2 text-[10px] text-[#565959] mt-0.5">
@@ -256,7 +257,7 @@ export function CustomerNavbar({
                 <button
                   type="button"
                   onClick={handleSearch}
-                  className="text-xs font-bold text-[#007185] hover:text-[#c7511f] hover:underline cursor-pointer"
+                  className="text-xs font-bold text-[#c90010] hover:text-[#e30613] hover:underline cursor-pointer"
                 >
                   View all catalog results for &ldquo;{searchTerm}&rdquo; →
                 </button>
@@ -268,7 +269,7 @@ export function CustomerNavbar({
             </div>
           ) : (
             <div className="p-4 text-center text-xs text-[#565959] flex items-center justify-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin text-[#f08804]" />
+              <Loader2 className="w-4 h-4 animate-spin text-[#e30613]" />
               <span>Searching Suzuki parts catalog...</span>
             </div>
           )}
@@ -286,8 +287,10 @@ export function CustomerNavbar({
           <button
             type="button"
             onClick={() => setIsDrawerOpen(true)}
-            className="md:hidden p-1.5 -ml-1 text-white hover:text-[#febd69] transition-colors cursor-pointer flex items-center justify-center"
+            className="md:hidden p-1.5 -ml-1 text-white hover:text-[#ff6872] transition-colors cursor-pointer flex items-center justify-center"
             aria-label="Open Navigation Drawer"
+            aria-expanded={isDrawerOpen}
+            aria-controls="customer-navigation-drawer"
           >
             <Menu className="w-6 h-6" />
           </button>
@@ -301,9 +304,9 @@ export function CustomerNavbar({
             </div>
             <div className="flex flex-col">
               <span className="font-extrabold text-base tracking-tight text-white leading-none">
-                suzuki<span className="text-[#febd69]">.mu</span>
+                suzuki<span className="text-[#ff6872]">.mu</span>
               </span>
-              <span className="text-[9px] uppercase tracking-widest text-[#febd69] font-bold">
+              <span className="text-[9px] uppercase tracking-widest text-[#ff6872] font-bold">
                 Mauritius
               </span>
             </div>
@@ -314,7 +317,7 @@ export function CustomerNavbar({
         <div className="hidden md:flex items-center gap-1 p-1.5 hover:outline hover:outline-1 hover:outline-white rounded cursor-pointer transition-all flex-shrink-0">
           <MapPin className="w-4 h-4 text-white mt-1" />
           <div className="flex flex-col leading-tight">
-            <span className="text-[11px] text-[#cccccc]">Deliver to</span>
+            <span className="text-[11px] text-[#cccccc]">Serving</span>
             <span className="font-bold text-white text-xs">Mauritius 🇲🇺</span>
           </div>
         </div>
@@ -328,7 +331,7 @@ export function CustomerNavbar({
           {profile?.role === "admin" && (
             <Link
               href="/admin"
-              className="flex items-center gap-1 px-2 py-1 rounded bg-[#febd69] text-[#111111] font-bold text-xs hover:bg-[#f3a847] transition-colors"
+              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[#e30613] text-white font-bold text-xs hover:bg-[#c90010] transition-colors"
               title="Admin Dashboard"
             >
               <ShieldCheck className="w-3.5 h-3.5 text-suzuki-red" />
@@ -370,7 +373,7 @@ export function CustomerNavbar({
             <div className="relative sm:hidden">
               <Inbox className="w-5 h-5 text-white" />
               {currentInquiryCount > 0 && (
-                <span className="absolute -top-1 -right-1.5 min-w-[15px] h-3.5 px-0.5 rounded-full bg-[#f08804] text-[#111111] font-black text-[9px] flex items-center justify-center">
+                <span className="absolute -top-1 -right-1.5 min-w-[15px] h-3.5 px-0.5 rounded-full bg-[#e30613] text-white font-black text-[9px] flex items-center justify-center">
                   {currentInquiryCount}
                 </span>
               )}
@@ -389,7 +392,7 @@ export function CustomerNavbar({
           >
             <div className="relative">
               <Car className="w-6 h-6 text-white" />
-              <span className="absolute -top-1 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-[#f08804] text-[#111111] font-black text-[10px] flex items-center justify-center">
+              <span className="absolute -top-1 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-[#e30613] text-white font-black text-[10px] flex items-center justify-center">
                 {vehicleCount}
               </span>
             </div>
@@ -417,13 +420,15 @@ export function CustomerNavbar({
       </div>
 
       {/* 2. Secondary Subnav Bar (Amazon Charcoal #232f3e) */}
-      <div className="bg-[#232f3e] px-4 py-1.5 flex items-center justify-between text-xs overflow-x-auto whitespace-nowrap">
+      <div className="nav-scroll bg-[#232f3e] px-4 py-1.5 flex items-center justify-between text-xs overflow-x-auto whitespace-nowrap">
         <div className="flex items-center gap-1 sm:gap-4">
           {/* ALL PARTS Hamburger Menu Button that triggers the drawer */}
           <button
             type="button"
             onClick={() => setIsDrawerOpen(true)}
             className="inline-flex items-center gap-1.5 px-2.5 py-1 font-bold text-white hover:outline hover:outline-1 hover:outline-white rounded cursor-pointer bg-[#37475a]/50 hover:bg-[#37475a]"
+            aria-expanded={isDrawerOpen}
+            aria-controls="customer-navigation-drawer"
           >
             <Menu className="w-4 h-4" />
             <span>All Parts & Categories</span>
@@ -456,6 +461,14 @@ export function CustomerNavbar({
           >
             <Newspaper className="w-3.5 h-3.5 text-[#febd69]" />
             <span>Mauritius News & Tech</span>
+          </Link>
+
+          <Link
+            href="/content"
+            className="inline-flex items-center gap-1 px-2 py-1 text-[#ffffff] hover:outline hover:outline-1 hover:outline-white rounded font-medium"
+          >
+            <Video className="w-3.5 h-3.5 text-[#febd69]" />
+            <span>Care Videos</span>
           </Link>
 
           <Link
@@ -494,7 +507,13 @@ export function CustomerNavbar({
           />
 
           {/* Drawer Menu Container */}
-          <div className="relative w-80 sm:w-96 bg-white h-full shadow-2xl flex flex-col z-10 overflow-y-auto text-[#0f1111]">
+          <div
+            id="customer-navigation-drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Suzuki navigation"
+            className="relative w-80 sm:w-96 bg-white h-full shadow-2xl flex flex-col z-10 overflow-y-auto text-[#0f1111]"
+          >
             {/* Drawer Header */}
             <div className="bg-[#232f3e] p-4 text-white flex items-center justify-between">
               <div className="flex items-center gap-2.5">
@@ -506,7 +525,7 @@ export function CustomerNavbar({
                     Hello, {firstName || "Suzuki Driver"}
                   </span>
                   <span className="text-[10px] text-[#febd69]">
-                    Deliver to Mauritius 🇲🇺
+                    Serving Suzuki owners in Mauritius 🇲🇺
                   </span>
                 </div>
               </div>
@@ -515,6 +534,7 @@ export function CustomerNavbar({
                 type="button"
                 onClick={() => setIsDrawerOpen(false)}
                 className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white cursor-pointer"
+                aria-label="Close navigation"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -525,7 +545,7 @@ export function CustomerNavbar({
               {/* Category Section with Icons */}
               <div>
                 <h3 className="font-extrabold text-sm text-[#0f1111] mb-2 uppercase tracking-wider text-[11px] text-[#565959]">
-                  Shop Parts by Department
+                  Browse Parts by Category
                 </h3>
                 <ul className="space-y-1">
                   <li>
@@ -681,12 +701,22 @@ export function CustomerNavbar({
                   </li>
                   <li>
                     <Link
+                      href="/content"
+                      onClick={() => setIsDrawerOpen(false)}
+                      className="flex items-center gap-2.5 p-2 rounded hover:bg-[#f3f3f3] text-[#0f1111]"
+                    >
+                      <Video className="w-4 h-4 text-[#007185]" />
+                      <span>Dealer Care Videos</span>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
                       href="/profile#inquiries"
                       onClick={() => setIsDrawerOpen(false)}
                       className="flex items-center gap-2.5 p-2 rounded hover:bg-[#f3f3f3] text-[#0f1111]"
                     >
                       <Inbox className="w-4 h-4 text-[#007185]" />
-                      <span>My Inquiries & Transactions{currentInquiryCount > 0 ? ` (${currentInquiryCount})` : ""}</span>
+                      <span>My Part Requests{currentInquiryCount > 0 ? ` (${currentInquiryCount})` : ""}</span>
                     </Link>
                   </li>
                   <li>

@@ -3,10 +3,13 @@
 @tailwind utilities;
 
 :root {
-  --background: #eaeded;
-  --foreground: #0f1111;
-  --amazon-yellow: #ffd814;
-  --amazon-orange: #ffa41c;
+  --background: #f5f6f7;
+  --foreground: #17191d;
+  --surface: #ffffff;
+  --surface-muted: #f0f2f4;
+  --border: #e3e6e8;
+  --suzuki-red: #e30613;
+  --suzuki-red-dark: #bc0010;
 }
 
 body {
@@ -18,67 +21,97 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Amazon Button Styles */
+::selection {
+  background: rgba(227, 6, 19, 0.18);
+  color: #111317;
+}
+
+:where(a, button, input, select, textarea):focus-visible {
+  outline: 3px solid rgba(227, 6, 19, 0.28);
+  outline-offset: 3px;
+}
+
+button:disabled {
+  box-shadow: none;
+  transform: none;
+}
+
+/* Shared action styles. Legacy class names are retained to avoid a risky app-wide rewrite. */
 .btn-amazon-primary {
-  background: #ffd814;
-  border: 1px solid #fcd200;
+  background: linear-gradient(135deg, var(--suzuki-red), #d00012);
+  border: 1px solid var(--suzuki-red);
   border-radius: 9999px;
-  color: #0f1111;
-  font-weight: 500;
-  box-shadow: 0 2px 5px rgba(213, 217, 217, 0.5);
-  transition: background 0.15s ease-in-out;
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 8px 20px rgba(227, 6, 19, 0.18);
+  transition: background 160ms ease, border-color 160ms ease,
+    box-shadow 160ms ease, transform 160ms ease;
 }
 
 .btn-amazon-primary:hover {
-  background: #f7ca00;
-  border-color: #f2c200;
+  background: linear-gradient(135deg, #f20a1a, var(--suzuki-red-dark));
+  border-color: var(--suzuki-red-dark);
+  box-shadow: 0 10px 24px rgba(227, 6, 19, 0.24);
+  transform: translateY(-1px);
+}
+
+.btn-amazon-primary:active {
+  transform: translateY(0) scale(0.99);
 }
 
 .btn-amazon-secondary {
-  background: #ffa41c;
-  border: 1px solid #ff8f00;
+  background: #171a1f;
+  border: 1px solid #171a1f;
   border-radius: 9999px;
-  color: #0f1111;
-  font-weight: 500;
-  box-shadow: 0 2px 5px rgba(213, 217, 217, 0.5);
-  transition: background 0.15s ease-in-out;
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 8px 18px rgba(17, 19, 23, 0.14);
+  transition: background 160ms ease, box-shadow 160ms ease,
+    transform 160ms ease;
 }
 
 .btn-amazon-secondary:hover {
-  background: #fa8900;
+  background: #2a2e35;
+  box-shadow: 0 10px 22px rgba(17, 19, 23, 0.18);
+  transform: translateY(-1px);
 }
 
 .btn-amazon-outline {
-  background: #ffffff;
-  border: 1px solid #d5d9d9;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid var(--border);
   border-radius: 9999px;
-  color: #0f1111;
-  font-weight: 500;
-  box-shadow: 0 2px 5px rgba(213, 217, 217, 0.5);
-  transition: background 0.15s ease-in-out;
+  color: #17191d;
+  font-weight: 650;
+  box-shadow: 0 4px 14px rgba(17, 19, 23, 0.06);
+  transition: background 160ms ease, border-color 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .btn-amazon-outline:hover {
-  background: #f7fafa;
-  border-color: #d5d9d9;
+  background: #f7f8f9;
+  border-color: #cbd0d4;
+  box-shadow: 0 7px 18px rgba(17, 19, 23, 0.09);
 }
 
-/* Amazon Card Standard */
+/* Shared surface style */
 .amazon-card {
   background-color: #ffffff;
-  border: 1px solid #e7e7e7;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 10px 32px rgba(17, 19, 23, 0.055);
+  transition: border-color 180ms ease, box-shadow 180ms ease,
+    transform 180ms ease;
 }
 
 .amazon-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: #d6dade;
+  box-shadow: 0 16px 42px rgba(17, 19, 23, 0.085);
 }
 
 /* Horizontal Scrollbar */
 .horizontal-scroll {
   scrollbar-width: thin;
-  scrollbar-color: #c1c1c1 #f1f1f1;
+  scrollbar-color: #b9bec3 transparent;
 }
 
 .horizontal-scroll::-webkit-scrollbar {
@@ -86,17 +119,49 @@ body {
 }
 
 .horizontal-scroll::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: transparent;
   border-radius: 4px;
 }
 
 .horizontal-scroll::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
+  background: #b9bec3;
   border-radius: 4px;
 }
 
 .horizontal-scroll::-webkit-scrollbar-thumb:hover {
-  background: #999999;
+  background: #92989e;
+}
+
+/* Clean, dark surfaces retained by onboarding, content, and dealer admin pages. */
+.bg-carbon-pattern {
+  background-color: #0f1115;
+  background-image:
+    radial-gradient(circle at 12% 0%, rgba(230, 0, 18, 0.14), transparent 30rem),
+    radial-gradient(circle at 92% 100%, rgba(71, 85, 105, 0.18), transparent 34rem),
+    linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+  background-size: auto, auto, 44px 44px, 44px 44px;
+}
+
+.bg-glass {
+  background: rgba(23, 26, 31, 0.94);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+}
+
+.bg-glass-card {
+  background: rgba(27, 31, 37, 0.94);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.nav-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.nav-scroll::-webkit-scrollbar {
+  display: none;
 }
 
 /* iOS Native Feel Enhancements */
@@ -107,10 +172,10 @@ body {
 }
 
 .ios-glass {
-  background: rgba(19, 25, 33, 0.92);
+  background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  border-top: 1px solid rgba(17, 19, 23, 0.08);
 }
 
 .ios-sheet {
@@ -127,3 +192,63 @@ body {
   padding-top: max(env(safe-area-inset-top, 0px), 0.5rem);
 }
 
+/* Premium login surface */
+.auth-shell {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(227, 6, 19, 0.09), transparent 28rem),
+    radial-gradient(circle at 92% 100%, rgba(17, 19, 23, 0.07), transparent 32rem),
+    #f6f7f8;
+}
+
+.auth-shell::before {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  content: "";
+  pointer-events: none;
+  opacity: 0.32;
+  background-image: linear-gradient(rgba(17, 19, 23, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(17, 19, 23, 0.035) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(to bottom, black, transparent 72%);
+}
+
+.auth-card {
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.92);
+  box-shadow: 0 24px 70px rgba(17, 19, 23, 0.12);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+}
+
+.auth-google-button {
+  background: #171a1f;
+  border: 1px solid #171a1f;
+  color: #ffffff;
+  box-shadow: 0 10px 24px rgba(17, 19, 23, 0.16);
+  transition: background 160ms ease, box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.auth-google-button:hover {
+  background: #292d34;
+  box-shadow: 0 14px 30px rgba(17, 19, 23, 0.2);
+  transform: translateY(-1px);
+}
+
+.auth-google-button:active {
+  transform: translateY(0) scale(0.99);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

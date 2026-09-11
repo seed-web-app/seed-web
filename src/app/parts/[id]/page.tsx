@@ -74,7 +74,7 @@ export default async function PartDetailPage({
     .slice(0, 8);
 
   return (
-    <div className="min-h-screen bg-[#eaeded] flex flex-col font-sans selection:bg-[#ffd814] selection:text-black">
+    <div className="min-h-screen bg-[#f5f6f7] flex flex-col font-sans">
       <CustomerNavbar
         profile={profile}
         vehicleCount={vehicles.length}
@@ -117,7 +117,7 @@ export default async function PartDetailPage({
                 href="/profile#inquiries"
                 className="mt-2 inline-block font-bold text-[#007185] hover:text-[#c7511f] hover:underline"
               >
-                Track this request in My Inquiries & Transactions →
+                Track this request in My Part Requests →
               </Link>
             </div>
           </div>
@@ -233,7 +233,7 @@ export default async function PartDetailPage({
                 <li>Factory genuine OEM specification replacement component.</li>
                 <li>Engineered specifically for Suzuki right-hand-drive island vehicles.</li>
                 <li>Passes Mauritius National Transport Authority road fitness standards.</li>
-                <li>Full fitment guarantee when ordered through authorized dealership parts desks.</li>
+                <li>Full fitment verification when requested through authorized dealership parts desks.</li>
               </ul>
             </div>
           </div>

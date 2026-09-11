@@ -1,10 +1,16 @@
 import { NextResponse } from "next/server";
 import { getCachedParts } from "@/lib/catalog";
+import { getCurrentProfile } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
+    const profile = await getCurrentProfile();
+    if (!profile) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const q = (searchParams.get("q") || "").trim().toLowerCase();
     const category = searchParams.get("category") || "All";

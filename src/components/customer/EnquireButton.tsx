@@ -26,6 +26,7 @@ export function EnquireButton({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [added, setAdded] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   const handleEnquire = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -33,9 +34,10 @@ export function EnquireButton({
 
     if (loading) return;
     setLoading(true);
+    setFailed(false);
 
     try {
-      // 1. Call the API to save inquiry in DB or guest cookie
+      // Save the request for the current signed-in customer.
       const res = await fetch("/api/inquiries", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -61,15 +63,11 @@ export function EnquireButton({
         // Keep added status displayed for 3 seconds then revert to neutral active state
         setTimeout(() => setAdded(false), 3500);
       } else {
-        if (redirectToPortal) {
-          router.push(`/profile?added=${encodeURIComponent(partId)}#inquiries`);
-        }
+        setFailed(true);
       }
     } catch (err) {
       console.error("Enquiry error:", err);
-      if (redirectToPortal) {
-        router.push(`/profile?added=${encodeURIComponent(partId)}#inquiries`);
-      }
+      setFailed(true);
     } finally {
       setLoading(false);
     }
@@ -88,7 +86,7 @@ export function EnquireButton({
           ? "py-1.5 px-3 rounded-full bg-[#e6f4ea] text-[#137333] border border-[#ceead6] text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-xs transition-all scale-[1.02]"
           : className || defaultClasses
       }
-      title={`Add ${partName || "part"} to your dealership quotation inquiry portal`}
+      title={`Request ${partName || "this part"} from the dealer`}
     >
       {loading ? (
         <>
@@ -102,8 +100,8 @@ export function EnquireButton({
         </>
       ) : (
         <>
-          {showIcon && <Send className="w-3 h-3" />}
-          <span>{label}</span>
+          {showIcon && (failed ? <span aria-hidden="true">!</span> : <Send className="w-3 h-3" />)}
+          <span>{failed ? "Try again" : label}</span>
         </>
       )}
     </button>

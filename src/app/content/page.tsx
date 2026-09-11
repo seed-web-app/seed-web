@@ -8,14 +8,17 @@ export const dynamic = "force-dynamic";
 
 function getEmbedUrl(url: string) {
   if (!url) return null;
+  // The original seed data used this well-known demo URL. Keep the post copy,
+  // but never present unrelated demo media as official dealer content.
+  if (url.includes("dQw4w9WgXcQ")) return null;
   // If YouTube watch URL
   if (url.includes("youtube.com/watch?v=")) {
     const videoId = url.split("v=")[1]?.split("&")[0];
-    return `https://www.youtube.com/embed/${videoId}`;
+    return `https://www.youtube-nocookie.com/embed/${videoId}`;
   }
   if (url.includes("youtu.be/")) {
     const videoId = url.split("youtu.be/")[1]?.split("?")[0];
-    return `https://www.youtube.com/embed/${videoId}`;
+    return `https://www.youtube-nocookie.com/embed/${videoId}`;
   }
   return url;
 }
@@ -85,7 +88,7 @@ export default async function ContentFeedPage() {
                 >
                   {/* Video Player Section */}
                   <div className="relative aspect-video w-full bg-suzuki-black border-b border-white/10">
-                    {embedUrl?.includes("youtube.com/embed") ? (
+                    {embedUrl?.includes("youtube-nocookie.com/embed") ? (
                       <iframe
                         src={embedUrl}
                         title={post.title}
@@ -93,14 +96,24 @@ export default async function ContentFeedPage() {
                         allowFullScreen
                         className="w-full h-full border-0"
                       />
-                    ) : (
+                    ) : embedUrl ? (
                       <video
                         controls
-                        src={post.video_url}
+                        src={embedUrl}
                         className="w-full h-full object-contain bg-black"
                       >
                         Your browser does not support HTML video.
                       </video>
+                    ) : (
+                      <div className="flex h-full flex-col items-center justify-center bg-gradient-to-br from-[#1f242b] to-[#111419] px-6 text-center">
+                        <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-suzuki-brightred">
+                          <Video className="h-6 w-6" />
+                        </div>
+                        <p className="text-sm font-bold text-white">Dealer video update in progress</p>
+                        <p className="mt-1 max-w-sm text-xs leading-5 text-slate-400">
+                          The guide notes are available below. A verified Suzuki video will appear here when the dealer publishes it.
+                        </p>
+                      </div>
                     )}
                   </div>
 

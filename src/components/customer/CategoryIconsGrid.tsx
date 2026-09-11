@@ -117,7 +117,7 @@ export function CategoryIconsGrid({ activeCategory }: CategoryIconsGridProps) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-[#e7e7e7] pb-3">
         <div>
           <h2 className="text-base sm:text-lg font-bold text-[#0f1111] flex items-center gap-2">
-            <span>Shop Suzuki Parts by Department</span>
+            <span>Browse Suzuki Parts by Category</span>
           </h2>
           <p className="text-xs text-[#565959]">
             Select a certified OEM category to filter genuine parts for Swift, Jimny, Grand Vitara, and Fronx
