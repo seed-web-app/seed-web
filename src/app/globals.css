@@ -3,13 +3,15 @@
 @tailwind utilities;
 
 :root {
-  --background: #f5f6f7;
-  --foreground: #17191d;
+  --background: #f5f5f7;
+  --foreground: #151518;
   --surface: #ffffff;
-  --surface-muted: #f0f2f4;
-  --border: #e3e6e8;
+  --surface-muted: #f0f0f2;
+  --border: rgba(25, 25, 28, 0.09);
   --suzuki-red: #e30613;
   --suzuki-red-dark: #bc0010;
+  --ink-muted: #6e6e73;
+  --ios-blue: #087cf0;
 }
 
 body {
@@ -19,6 +21,7 @@ body {
   overflow-x: hidden;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 ::selection {
@@ -38,18 +41,18 @@ button:disabled {
 
 /* Shared action styles. Legacy class names are retained to avoid a risky app-wide rewrite. */
 .btn-amazon-primary {
-  background: linear-gradient(135deg, var(--suzuki-red), #d00012);
-  border: 1px solid var(--suzuki-red);
+  background: var(--suzuki-red);
+  border: 1px solid rgba(0, 0, 0, 0.02);
   border-radius: 9999px;
   color: #ffffff;
   font-weight: 700;
-  box-shadow: 0 8px 20px rgba(227, 6, 19, 0.18);
+  box-shadow: 0 8px 22px rgba(227, 6, 19, 0.2);
   transition: background 160ms ease, border-color 160ms ease,
     box-shadow 160ms ease, transform 160ms ease;
 }
 
 .btn-amazon-primary:hover {
-  background: linear-gradient(135deg, #f20a1a, var(--suzuki-red-dark));
+  background: #c90010;
   border-color: var(--suzuki-red-dark);
   box-shadow: 0 10px 24px rgba(227, 6, 19, 0.24);
   transform: translateY(-1px);
@@ -60,8 +63,8 @@ button:disabled {
 }
 
 .btn-amazon-secondary {
-  background: #171a1f;
-  border: 1px solid #171a1f;
+  background: #1d1d1f;
+  border: 1px solid #1d1d1f;
   border-radius: 9999px;
   color: #ffffff;
   font-weight: 700;
@@ -77,7 +80,7 @@ button:disabled {
 }
 
 .btn-amazon-outline {
-  background: rgba(255, 255, 255, 0.94);
+  background: rgba(255, 255, 255, 0.88);
   border: 1px solid var(--border);
   border-radius: 9999px;
   color: #17191d;
@@ -95,17 +98,84 @@ button:disabled {
 
 /* Shared surface style */
 .amazon-card {
-  background-color: #ffffff;
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  box-shadow: 0 10px 32px rgba(17, 19, 23, 0.055);
+  background-color: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(25, 25, 28, 0.075);
+  border-radius: 24px;
+  box-shadow: 0 1px 2px rgba(17, 19, 23, 0.03),
+    0 14px 38px rgba(17, 19, 23, 0.055);
   transition: border-color 180ms ease, box-shadow 180ms ease,
     transform 180ms ease;
 }
 
 .amazon-card:hover {
-  border-color: #d6dade;
-  box-shadow: 0 16px 42px rgba(17, 19, 23, 0.085);
+  border-color: rgba(25, 25, 28, 0.11);
+  box-shadow: 0 2px 3px rgba(17, 19, 23, 0.04),
+    0 20px 46px rgba(17, 19, 23, 0.075);
+}
+
+.app-canvas {
+  background:
+    radial-gradient(circle at 4% 0%, rgba(227, 6, 19, 0.055), transparent 25rem),
+    radial-gradient(circle at 96% 30%, rgba(8, 124, 240, 0.045), transparent 30rem),
+    #f5f5f7;
+}
+
+.ios-card {
+  border: 1px solid rgba(25, 25, 28, 0.075);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1px 2px rgba(17, 19, 23, 0.025),
+    0 14px 40px rgba(17, 19, 23, 0.055);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.ios-field {
+  border: 1px solid rgba(25, 25, 28, 0.1);
+  background: rgba(245, 245, 247, 0.92);
+  color: #1d1d1f;
+  transition: border-color 160ms ease, background 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.ios-field:focus {
+  border-color: rgba(8, 124, 240, 0.5);
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(8, 124, 240, 0.1);
+  outline: none;
+}
+
+.ios-chip {
+  border: 1px solid rgba(25, 25, 28, 0.075);
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: 0 4px 14px rgba(17, 19, 23, 0.045);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.ios-section-title {
+  color: #1d1d1f;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+}
+
+.app-canvas input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]),
+.app-canvas select,
+.app-canvas textarea {
+  border-color: rgba(25, 25, 28, 0.1);
+  border-radius: 14px;
+  background-color: rgba(245, 245, 247, 0.94);
+  color: #1d1d1f;
+  transition: border-color 160ms ease, background-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.app-canvas input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):focus,
+.app-canvas select:focus,
+.app-canvas textarea:focus {
+  border-color: rgba(8, 124, 240, 0.45);
+  background-color: #ffffff;
+  box-shadow: 0 0 0 4px rgba(8, 124, 240, 0.09);
+  outline: none;
 }
 
 /* Horizontal Scrollbar */

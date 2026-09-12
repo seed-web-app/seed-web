@@ -81,12 +81,12 @@ export function IOSBottomTabBar() {
   return (
     <nav
       aria-label="Mobile navigation"
-      className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/94 backdrop-blur-2xl border-t border-black/[0.08] shadow-[0_-8px_30px_rgba(17,19,23,0.10)] select-none"
+      className="fixed bottom-2 left-3 right-3 z-40 rounded-[24px] border border-white/80 bg-white/[0.88] shadow-[0_18px_50px_rgba(17,19,23,0.18)] backdrop-blur-2xl select-none md:hidden"
       style={{
-        paddingBottom: "max(env(safe-area-inset-bottom, 0px), 0.5rem)",
+        paddingBottom: "max(env(safe-area-inset-bottom, 0px), 0.35rem)",
       }}
     >
-      <div className="grid grid-cols-5 items-center h-14 px-1">
+      <div className="grid h-[60px] grid-cols-5 items-center px-1.5">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           return (
@@ -99,10 +99,10 @@ export function IOSBottomTabBar() {
                   : "text-[#71767d] hover:text-[#17191d]"
               }`}
             >
-              <div className="relative">
+              <div className={`relative flex h-7 min-w-9 items-center justify-center rounded-full transition ${tab.isActive ? "bg-[#fff0f1]" : ""}`}>
                 <Icon
-                  className={`w-5 h-5 transition-transform ${
-                    tab.isActive ? "stroke-[2.5] scale-110" : "stroke-[1.8]"
+                  className={`h-[18px] w-[18px] transition-transform ${
+                    tab.isActive ? "stroke-[2.5]" : "stroke-[1.8]"
                   }`}
                 />
                 {tab.badge !== undefined && (
@@ -112,7 +112,7 @@ export function IOSBottomTabBar() {
                 )}
               </div>
               <span
-                className={`text-[10px] mt-0.5 tracking-tight ${
+                className={`mt-0.5 text-[9px] tracking-tight ${
                   tab.isActive ? "font-bold text-[#e30613]" : "font-medium"
                 }`}
               >

@@ -21,12 +21,12 @@ export default async function NewsFeedPage() {
   const articles = (rawNews as NewsArticle[]) || [];
 
   return (
-    <div className="min-h-screen bg-[#f5f6f7] flex flex-col font-sans">
+    <div className="app-canvas min-h-screen flex flex-col font-sans text-[#1d1d1f]">
       <CustomerNavbar profile={profile} vehicleCount={vehicles.length} />
 
       <main className="flex-1 max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-8 space-y-6">
         {/* Banner Header */}
-        <div className="amazon-card p-6 sm:p-8 bg-gradient-to-r from-[#131921] to-[#232f3e] text-white rounded-lg">
+        <div className="amazon-card p-7 sm:p-10 bg-gradient-to-br from-[#1d1d1f] to-[#3a3a3f] text-white rounded-[30px]">
           <div className="max-w-3xl space-y-2">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-[#febd69] text-[#111111] font-bold text-[10px] uppercase tracking-wider">
               <Sparkles className="w-3.5 h-3.5" />

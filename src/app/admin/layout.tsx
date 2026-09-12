@@ -12,6 +12,8 @@ import {
   ShieldCheck,
   Eye,
   LogOut,
+  Gift,
+  Layers3,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +35,9 @@ export default async function AdminLayout({
   const navItems = [
     { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
     { href: "/admin/parts", label: "Parts Inventory", icon: Package },
+    { href: "/admin/categories", label: "Part Categories", icon: Layers3 },
     { href: "/admin/inquiries", label: "Customer Inquiries", icon: Inbox },
+    { href: "/admin/offers", label: "Personal Offers", icon: Gift },
     { href: "/admin/content", label: "Video & Content", icon: Video },
     { href: "/admin/users", label: "Registered Customers", icon: Users },
     { href: "/admin/settings", label: "Dealer Settings", icon: Settings },
@@ -42,7 +46,7 @@ export default async function AdminLayout({
   return (
     <div className="min-h-screen bg-suzuki-black text-slate-100 flex flex-col md:flex-row selection:bg-suzuki-red selection:text-white">
       {/* Sidebar Navigation */}
-      <aside className="w-full md:w-64 bg-suzuki-carbon border-r border-white/10 flex-shrink-0 flex flex-col justify-between">
+      <aside className="w-full md:sticky md:top-0 md:h-screen md:w-64 bg-suzuki-carbon border-r border-white/10 flex-shrink-0 flex flex-col justify-between">
         <div>
           {/* Brand header */}
           <div className="p-6 border-b border-white/10 flex items-center justify-between">
@@ -65,7 +69,7 @@ export default async function AdminLayout({
           </div>
 
           {/* Navigation links */}
-          <nav className="p-4 space-y-1.5">
+          <nav className="grid grid-cols-2 gap-1.5 p-4 sm:grid-cols-3 md:block md:space-y-1.5">
             {navItems.map((item) => {
               const Icon = item.icon;
               return (

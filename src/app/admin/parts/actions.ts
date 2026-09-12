@@ -16,6 +16,8 @@ export async function createPart(formData: FormData) {
     formData.get("condition_note")?.toString().trim() || STANDING_CONDITION_DISCLAIMER;
   const primer_note = formData.get("primer_note")?.toString().trim() || null;
   const part_number = formData.get("part_number")?.toString().trim() || null;
+  const short_description = formData.get("short_description")?.toString().trim() || null;
+  const description = formData.get("description")?.toString().trim() || null;
   const status = (formData.get("status")?.toString() as "available" | "reserved" | "sold") || "available";
   const is_offer = formData.get("is_offer") === "on";
 
@@ -48,10 +50,12 @@ export async function createPart(formData: FormData) {
     condition_note,
     primer_note,
     part_number,
+    short_description,
+    description,
     status,
     is_offer,
     compatible_models,
-    photos: photos.length > 0 ? photos : ["https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=1200&q=80"],
+    photos: photos.length > 0 ? photos : ["/brand/parts-studio.jpg"],
   });
 
   if (error) {
@@ -77,6 +81,8 @@ export async function updatePart(formData: FormData) {
   const condition_note = formData.get("condition_note")?.toString().trim();
   const primer_note = formData.get("primer_note")?.toString().trim() || null;
   const part_number = formData.get("part_number")?.toString().trim() || null;
+  const short_description = formData.get("short_description")?.toString().trim() || null;
+  const description = formData.get("description")?.toString().trim() || null;
   const status = (formData.get("status")?.toString() as "available" | "reserved" | "sold") || "available";
   const is_offer = formData.get("is_offer") === "on";
 
@@ -109,6 +115,8 @@ export async function updatePart(formData: FormData) {
       condition_note,
       primer_note,
       part_number,
+      short_description,
+      description,
       status,
       is_offer,
       compatible_models,

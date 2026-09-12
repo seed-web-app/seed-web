@@ -69,14 +69,14 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
   const years = Array.from({ length: 30 }, (_, i) => currentYear - i);
 
   return (
-    <div className="min-h-screen bg-[#f5f6f7] flex flex-col font-sans">
+    <div className="app-canvas min-h-screen flex flex-col font-sans text-[#1d1d1f]">
       <CustomerNavbar
         profile={profile}
         vehicleCount={vehicles.length}
         inquiryCount={inquiries.length}
       />
 
-      <main className="flex-1 max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-8 space-y-6">
+      <main className="flex-1 max-w-[1380px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-7 pb-24 md:pb-12 space-y-6">
         {/* Added to Enquiry Portal Success Banner */}
         {addedPart && (
           <div className="p-4 sm:p-5 rounded-lg bg-[#e7f4e4] border-2 border-[#2b8a3e] shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -140,7 +140,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
         )}
 
         {/* Amazon Account Banner */}
-        <div className="amazon-card p-6 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg">
+        <div className="amazon-card p-6 sm:p-8 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-[30px]">
           <div className="flex items-center gap-3.5">
             <div className="w-12 h-12 rounded-full bg-[#f3f3f3] border border-[#d5d9d9] flex items-center justify-center text-base font-bold text-[#0f1111]">
               {profile?.avatar_url ? (
@@ -157,7 +157,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
               )}
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-[#0f1111]">
+              <h1 className="text-2xl sm:text-3xl font-black tracking-[-0.04em] text-[#1d1d1f]">
                 {profile ? "Your Account & Mauritius Garage" : "Customer Dealership Enquiry Portal"}
               </h1>
               <p className="text-xs text-[#565959]">

@@ -74,7 +74,7 @@ export default async function ForumPage({ searchParams }: ForumPageProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-[#f5f6f7] flex flex-col font-sans">
+    <div className="app-canvas min-h-screen flex flex-col font-sans text-[#1d1d1f]">
       <CustomerNavbar profile={profile} vehicleCount={vehicles.length} />
 
       <main className="flex-1 max-w-[1200px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-8 space-y-6">
@@ -98,7 +98,7 @@ export default async function ForumPage({ searchParams }: ForumPageProps) {
         )}
 
         {/* Banner Header */}
-        <div className="amazon-card p-6 sm:p-8 bg-gradient-to-r from-[#131921] to-[#232f3e] text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="amazon-card p-7 sm:p-10 bg-gradient-to-br from-[#1d1d1f] to-[#3a3a3f] text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-[30px]">
           <div>
             <span className="inline-block bg-[#f08804] text-[#111111] font-bold text-[10px] uppercase tracking-wider px-2 py-0.5 rounded mb-1">
               Mauritius Suzuki Owners Community

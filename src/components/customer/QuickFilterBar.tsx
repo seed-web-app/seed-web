@@ -16,7 +16,7 @@ const POPULAR_MODELS = [
 
 const POPULAR_CATEGORIES = [
   { label: "All Parts", value: "All", icon: Wrench },
-  { label: "⚡ Featured Deals", value: "Offers", icon: Flame },
+  { label: "Offers", value: "Offers", icon: Flame },
   { label: "Body Panels", value: "Body Panels", icon: Tag },
   { label: "Engine & Service", value: "Engine & Drivetrain", icon: Sparkles },
   { label: "Brakes & Wheels", value: "Brakes & Wheels", icon: Sparkles },
@@ -39,7 +39,7 @@ export function QuickFilterBar() {
     } else {
       params.set("model", model);
     }
-    router.push(`/home?${params.toString()}`);
+    router.push(`/home${params.size ? `?${params.toString()}` : ""}#all-parts`);
   };
 
   const handleCategoryChange = (cat: string) => {
@@ -54,16 +54,16 @@ export function QuickFilterBar() {
       params.delete("offers");
       params.set("category", cat);
     }
-    router.push(`/home?${params.toString()}`);
+    router.push(`/home${params.size ? `?${params.toString()}` : ""}#all-parts`);
   };
 
   return (
-    <div className="bg-white border border-[#e7e7e7] rounded-2xl p-3 sm:p-4 shadow-xs space-y-3 select-none">
+    <div className="ios-card space-y-3 rounded-[24px] p-3 select-none sm:p-4">
       {/* 1. Model Selector Strip */}
       <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1.5 text-xs font-bold text-[#0f1111] flex-shrink-0 mr-1">
-          <Car className="w-4 h-4 text-[#e30613]" />
-          <span className="hidden sm:inline">Filter by</span> Model:
+        <div className="mr-1 flex flex-shrink-0 items-center gap-1.5 text-xs font-bold text-[#1d1d1f]">
+          <Car className="h-4 w-4 text-[#e30613]" />
+          <span className="hidden sm:inline">Your</span> model
         </div>
 
         <div className="flex items-center gap-1.5 overflow-x-auto horizontal-scroll py-1 -my-1">
@@ -77,10 +77,10 @@ export function QuickFilterBar() {
                 key={model}
                 type="button"
                 onClick={() => handleModelChange(model)}
-                className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1 active:scale-95 ${
+                className={`flex min-h-8 cursor-pointer items-center gap-1 whitespace-nowrap rounded-full px-3 text-[11px] font-semibold transition-all active:scale-95 ${
                   isActive
-                    ? "bg-[#e30613] text-white border border-[#e30613] shadow-xs font-bold"
-                    : "bg-[#f0f2f2] text-[#0f1111] hover:bg-[#e3e6e6] border border-transparent"
+                    ? "bg-[#e30613] text-white shadow-[0_6px_14px_rgba(227,6,19,0.16)] font-bold"
+                    : "bg-[#f2f2f4] text-[#6e6e73] hover:bg-[#e9e9ec] hover:text-[#1d1d1f]"
                 }`}
               >
                 {isActive && <Check className="w-3 h-3 text-white" />}
@@ -92,7 +92,7 @@ export function QuickFilterBar() {
       </div>
 
       {/* 2. Fast Category Pills */}
-      <div className="flex items-center gap-1.5 overflow-x-auto horizontal-scroll pt-2 border-t border-[#f0f0f0] -mb-1 pb-1">
+      <div className="horizontal-scroll -mb-1 flex items-center gap-1.5 overflow-x-auto border-t border-black/[0.06] pb-1 pt-3">
         {POPULAR_CATEGORIES.map((cat) => {
           const isCatActive =
             cat.value === "Offers"
@@ -106,10 +106,10 @@ export function QuickFilterBar() {
               key={cat.label}
               type="button"
               onClick={() => handleCategoryChange(cat.value)}
-              className={`px-2.5 py-1 rounded-lg text-xs whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 ${
+              className={`flex min-h-8 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-[11px] transition-all active:scale-95 ${
                 isCatActive
-                  ? "bg-[#171a1f] text-white font-bold shadow-xs"
-                  : "bg-white text-[#565959] hover:text-[#0f1111] hover:bg-[#f7f7f7] border border-[#d5d9d9]"
+                  ? "bg-[#1d1d1f] text-white font-bold shadow-sm"
+                  : "bg-white text-[#6e6e73] hover:text-[#1d1d1f] border border-black/[0.07]"
               }`}
             >
               <span>{cat.label}</span>

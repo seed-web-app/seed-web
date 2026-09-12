@@ -10,6 +10,7 @@ import {
   Clock,
   CheckCircle2,
   Sparkles,
+  Gift,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -95,8 +96,15 @@ export default async function AdminDashboardPage() {
 
         <div className="flex items-center gap-3">
           <Link
-            href="/admin/parts"
+            href="/admin/offers"
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-suzuki-red hover:bg-suzuki-brightred text-white text-xs font-bold shadow-md shadow-suzuki-red/20 transition-all cursor-pointer"
+          >
+            <Gift className="w-4 h-4" />
+            <span>Personal Offer</span>
+          </Link>
+          <Link
+            href="/admin/parts"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-suzuki-slate hover:bg-slate-700 text-white text-xs font-bold border border-white/10 transition-all cursor-pointer"
           >
             <Package className="w-4 h-4" />
             <span>Manage Parts</span>

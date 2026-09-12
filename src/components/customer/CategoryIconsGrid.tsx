@@ -1,110 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import {
-  Car,
-  Wrench,
-  Zap,
-  Activity,
-  Disc3,
-  Armchair,
-  Sparkles,
-  Fan,
-  ChevronRight,
-} from "lucide-react";
+import { Activity, Armchair, ArrowUpRight, Car, Disc3, Wrench, Zap } from "lucide-react";
 
-interface CategoryMeta {
-  name: string;
-  queryParam: string;
-  icon: React.ElementType;
-  badge: string;
-  highlight: string;
-  popularItems: string;
-  bgColor: string;
-  iconColor: string;
-}
-
-const CATEGORIES_META: CategoryMeta[] = [
-  {
-    name: "Body Panels (Gray Primer)",
-    queryParam: "Body Panels",
-    icon: Car,
-    badge: "14 Parts",
-    highlight: "Factory Primer Sealed",
-    popularItems: "Bumpers, Fenders, Hoods, Grilles",
-    bgColor: "bg-blue-50 border-blue-200",
-    iconColor: "text-blue-600",
-  },
-  {
-    name: "Engine & Drivetrain",
-    queryParam: "Engine & Drivetrain",
-    icon: Wrench,
-    badge: "12 Parts",
-    highlight: "Boosterjet & DualJet",
-    popularItems: "Turbochargers, Timing Chains, Clutches",
-    bgColor: "bg-amber-50 border-amber-200",
-    iconColor: "text-amber-600",
-  },
-  {
-    name: "Electrical & Lighting",
-    queryParam: "Electrical & Lighting",
-    icon: Zap,
-    badge: "12 Parts",
-    highlight: "Smart Hybrid & LED",
-    popularItems: "Headlamps, Hybrid Inverters, Alternators",
-    bgColor: "bg-yellow-50 border-yellow-200",
-    iconColor: "text-yellow-600",
-  },
-  {
-    name: "Suspension & Steering",
-    queryParam: "Suspension & Steering",
-    icon: Activity,
-    badge: "10 Parts",
-    highlight: "AllGrip Off-Road & Track",
-    popularItems: "Shock Absorbers, Control Arms, Tie Rods",
-    bgColor: "bg-emerald-50 border-emerald-200",
-    iconColor: "text-emerald-600",
-  },
-  {
-    name: "Brakes & Wheels",
-    queryParam: "Brakes & Wheels",
-    icon: Disc3,
-    badge: "10 Parts",
-    highlight: "OEM High Friction",
-    popularItems: "Ceramic Pads, Ventilated Discs, ABS Sensors",
-    bgColor: "bg-rose-50 border-rose-200",
-    iconColor: "text-rose-600",
-  },
-  {
-    name: "Interior & Accessories",
-    queryParam: "Interior & Accessories",
-    icon: Armchair,
-    badge: "10 Parts",
-    highlight: "Genuine Comfort",
-    popularItems: "All-Weather Mats, Armrests, Steering Trim",
-    bgColor: "bg-purple-50 border-purple-200",
-    iconColor: "text-purple-600",
-  },
-  {
-    name: "Maintenance & Service Kits",
-    queryParam: "Engine & Drivetrain",
-    icon: Sparkles,
-    badge: "Quick Service",
-    highlight: "Dealership Certified",
-    popularItems: "Oil Filters, Iridium Plugs, Cabin Air Filters",
-    bgColor: "bg-teal-50 border-teal-200",
-    iconColor: "text-teal-600",
-  },
-  {
-    name: "Cooling & Air Conditioning",
-    queryParam: "Engine & Drivetrain",
-    icon: Fan,
-    badge: "Tropical Climate Spec",
-    highlight: "Island Heavy-Duty",
-    popularItems: "Aluminum Radiators, AC Compressors, Water Pumps",
-    bgColor: "bg-cyan-50 border-cyan-200",
-    iconColor: "text-cyan-600",
-  },
+const categories = [
+  { name: "Body panels", detail: "Primer-ready", query: "Body Panels", icon: Car, tone: "bg-[#eaf3ff] text-[#087cf0]" },
+  { name: "Engine", detail: "Drive & service", query: "Engine & Drivetrain", icon: Wrench, tone: "bg-[#fff3df] text-[#d46b08]" },
+  { name: "Electrical", detail: "Lights & hybrid", query: "Electrical & Lighting", icon: Zap, tone: "bg-[#fff8d8] text-[#a56a00]" },
+  { name: "Suspension", detail: "Steering & ride", query: "Suspension & Steering", icon: Activity, tone: "bg-[#e8f8ef] text-[#138a51]" },
+  { name: "Brakes", detail: "Wheels & ABS", query: "Brakes & Wheels", icon: Disc3, tone: "bg-[#fff0f1] text-[#e30613]" },
+  { name: "Interior", detail: "Cabin accessories", query: "Interior & Accessories", icon: Armchair, tone: "bg-[#f3edff] text-[#7f52c5]" },
 ];
 
 interface CategoryIconsGridProps {
@@ -113,57 +18,36 @@ interface CategoryIconsGridProps {
 
 export function CategoryIconsGrid({ activeCategory }: CategoryIconsGridProps) {
   return (
-    <div className="amazon-card bg-white p-4 sm:p-6 space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-[#e7e7e7] pb-3">
+    <section aria-labelledby="category-title">
+      <div className="mb-4 flex items-end justify-between gap-4 px-1">
         <div>
-          <h2 className="text-base sm:text-lg font-bold text-[#0f1111] flex items-center gap-2">
-            <span>Browse Suzuki Parts by Category</span>
-          </h2>
-          <p className="text-xs text-[#565959]">
-            Select a certified OEM category to filter genuine parts for Swift, Jimny, Grand Vitara, and Fronx
-          </p>
+          <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[#e30613]">Quick access</p>
+          <h2 id="category-title" className="ios-section-title text-2xl sm:text-3xl">Find your part</h2>
         </div>
-        <Link
-          href="/home"
-          className="text-xs font-semibold text-[#007185] hover:text-[#c7511f] hover:underline flex items-center gap-1 self-start sm:self-auto"
-        >
-          <span>View All Categories</span>
-          <ChevronRight className="w-3.5 h-3.5" />
-        </Link>
+        <Link href="/home#all-parts" className="hidden items-center gap-1 text-xs font-bold text-[#087cf0] sm:flex">View catalog <ArrowUpRight className="h-3.5 w-3.5" /></Link>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-3">
-        {CATEGORIES_META.map((cat) => {
-          const Icon = cat.icon;
-          const isSelected = activeCategory === cat.queryParam;
-
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        {categories.map((category) => {
+          const Icon = category.icon;
+          const active = activeCategory === category.query;
           return (
             <Link
-              key={cat.name}
-              href={`/home?category=${encodeURIComponent(cat.queryParam)}`}
-              className={`group flex flex-col items-center text-center p-3 rounded-lg border transition-all duration-200 hover:shadow-md hover:border-[#f08804] ${
-                isSelected
-                  ? "border-[#f08804] bg-[#fffcf5] ring-2 ring-[#f08804]/30"
-                  : "border-[#e7e7e7] bg-white hover:bg-[#fafafa]"
-              }`}
+              key={category.name}
+              href={`/home?category=${encodeURIComponent(category.query)}`}
+              aria-current={active ? "page" : undefined}
+              className={`group relative overflow-hidden rounded-[22px] p-4 transition duration-200 hover:-translate-y-1 ${active ? "bg-[#1d1d1f] text-white shadow-xl" : "ios-card text-[#1d1d1f]"}`}
             >
-              <div
-                className={`w-12 h-12 rounded-full flex items-center justify-center mb-2.5 transition-transform group-hover:scale-110 ${cat.bgColor}`}
-              >
-                <Icon className={`w-6 h-6 ${cat.iconColor}`} />
+              <div className={`mb-5 flex h-11 w-11 items-center justify-center rounded-2xl ${active ? "bg-white/12 text-white" : category.tone}`}>
+                <Icon className="h-5 w-5" />
               </div>
-
-              <h3 className="text-xs font-bold text-[#0f1111] leading-tight group-hover:text-[#c7511f] line-clamp-2 h-8 flex items-center justify-center">
-                {cat.name}
-              </h3>
-
-              <span className="mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#f0f2f2] text-[#565959] group-hover:bg-[#fbd88e] group-hover:text-[#111111]">
-                {cat.badge}
-              </span>
+              <p className="text-sm font-extrabold tracking-[-0.02em]">{category.name}</p>
+              <p className={`mt-1 text-[10px] font-semibold ${active ? "text-white/55" : "text-[#8e8e93]"}`}>{category.detail}</p>
+              <ArrowUpRight className={`absolute right-4 top-4 h-3.5 w-3.5 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5 ${active ? "text-white/60" : "text-[#c7c7cc]"}`} />
             </Link>
           );
         })}
       </div>
-    </div>
+    </section>
   );
 }

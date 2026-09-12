@@ -14,6 +14,7 @@ import {
   Edit3,
   X,
   ExternalLink,
+  Layers3,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -50,8 +51,14 @@ export default async function AdminPartsPage({ searchParams }: AdminPartsPagePro
     query = query.ilike("name", `%${q}%`);
   }
 
-  const { data: rawParts } = await query;
+  const [{ data: rawParts }, { data: rawCategories }] = await Promise.all([
+    query,
+    supabase.from("part_categories").select("name").eq("is_active", true).order("name"),
+  ]);
   const parts = (rawParts as Part[]) || [];
+  const categoryOptions = rawCategories?.length
+    ? rawCategories.map((item) => item.name as string)
+    : [...PART_CATEGORIES];
 
   // If editing a part, fetch it
   let partToEdit: Part | null = null;
@@ -95,13 +102,18 @@ export default async function AdminPartsPage({ searchParams }: AdminPartsPagePro
           </p>
         </div>
 
-        <Link
-          href="/admin/parts?add=true"
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-suzuki-red hover:bg-suzuki-brightred text-white text-xs font-bold shadow-lg shadow-suzuki-red/30 transition-all cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add New Part</span>
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/admin/categories" className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-xs font-bold text-white transition-colors hover:bg-white/10">
+            <Layers3 className="h-4 w-4" /> Categories
+          </Link>
+          <Link
+            href="/admin/parts?add=true"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-suzuki-red hover:bg-suzuki-brightred text-white text-xs font-bold shadow-lg shadow-suzuki-red/30 transition-all cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add New Part</span>
+          </Link>
+        </div>
       </div>
 
       {/* Search & Filter Bar */}
@@ -136,7 +148,7 @@ export default async function AdminPartsPage({ searchParams }: AdminPartsPagePro
               className="px-3 py-2 rounded-xl bg-suzuki-slate/90 border border-white/10 text-xs text-white focus:border-suzuki-red focus:outline-none transition-colors"
             >
               <option value="all">All Categories</option>
-              {PART_CATEGORIES.map((cat) => (
+              {categoryOptions.map((cat) => (
                 <option key={cat} value={cat}>
                   {cat}
                 </option>
@@ -210,6 +222,7 @@ export default async function AdminPartsPage({ searchParams }: AdminPartsPagePro
                           <p className="text-[10px] font-mono text-slate-400">
                             {part.part_number ? `#${part.part_number}` : "No part code"}
                           </p>
+                          {part.short_description ? <p className="mt-1 max-w-sm truncate text-[10px] text-slate-500">{part.short_description}</p> : null}
                         </div>
                       </div>
                     </td>
@@ -222,7 +235,7 @@ export default async function AdminPartsPage({ searchParams }: AdminPartsPagePro
 
                     <td className="py-4 px-4">
                       <span className="font-bold text-white text-sm">
-                        ${Number(part.price).toFixed(2)}
+                        Rs {Number(part.price).toLocaleString()}
                       </span>
                     </td>
 
@@ -322,6 +335,16 @@ export default async function AdminPartsPage({ searchParams }: AdminPartsPagePro
                 />
               </div>
 
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Short Description</label>
+                <input name="short_description" maxLength={160} placeholder="One clear line customers see in the parts feed" className="w-full px-3.5 py-2.5 rounded-xl bg-suzuki-slate border border-white/15 text-white text-xs sm:text-sm focus:border-suzuki-red focus:outline-none transition-colors" />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Full Description</label>
+                <textarea name="description" rows={4} placeholder="Fitment, material, finish, and useful product details" className="w-full px-3.5 py-2.5 rounded-xl bg-suzuki-slate border border-white/15 text-white text-xs sm:text-sm focus:border-suzuki-red focus:outline-none transition-colors" />
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">
@@ -333,7 +356,7 @@ export default async function AdminPartsPage({ searchParams }: AdminPartsPagePro
                     defaultValue="Body Panels"
                     className="w-full px-3.5 py-2.5 rounded-xl bg-suzuki-slate border border-white/15 text-white text-xs sm:text-sm focus:border-suzuki-red focus:outline-none transition-colors"
                   >
-                    {PART_CATEGORIES.map((c) => (
+                    {categoryOptions.map((c) => (
                       <option key={c} value={c}>
                         {c}
                       </option>
@@ -343,7 +366,7 @@ export default async function AdminPartsPage({ searchParams }: AdminPartsPagePro
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Reference Price ($ USD) <span className="text-suzuki-red">*</span>
+                    Reference Price (MUR) <span className="text-suzuki-red">*</span>
                   </label>
                   <input
                     type="number"
@@ -499,6 +522,16 @@ export default async function AdminPartsPage({ searchParams }: AdminPartsPagePro
                 />
               </div>
 
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Short Description</label>
+                <input name="short_description" maxLength={160} defaultValue={partToEdit.short_description || ""} className="w-full px-3.5 py-2.5 rounded-xl bg-suzuki-slate border border-white/15 text-white text-xs sm:text-sm focus:border-suzuki-red focus:outline-none transition-colors" />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Full Description</label>
+                <textarea name="description" rows={4} defaultValue={partToEdit.description || ""} className="w-full px-3.5 py-2.5 rounded-xl bg-suzuki-slate border border-white/15 text-white text-xs sm:text-sm focus:border-suzuki-red focus:outline-none transition-colors" />
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">
@@ -510,7 +543,7 @@ export default async function AdminPartsPage({ searchParams }: AdminPartsPagePro
                     defaultValue={partToEdit.category}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-suzuki-slate border border-white/15 text-white text-xs sm:text-sm focus:border-suzuki-red focus:outline-none transition-colors"
                   >
-                    {PART_CATEGORIES.map((c) => (
+                    {categoryOptions.map((c) => (
                       <option key={c} value={c}>
                         {c}
                       </option>
@@ -520,7 +553,7 @@ export default async function AdminPartsPage({ searchParams }: AdminPartsPagePro
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Reference Price ($ USD) <span className="text-suzuki-red">*</span>
+                    Reference Price (MUR) <span className="text-suzuki-red">*</span>
                   </label>
                   <input
                     type="number"

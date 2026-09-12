@@ -37,8 +37,38 @@ export interface Part {
   status: PartStatus;
   is_offer: boolean;
   part_number?: string | null;
+  short_description?: string | null;
+  description?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface PartCategory {
+  id: string;
+  name: string;
+  short_description: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type OfferChannel = "whatsapp" | "email" | "phone";
+export type OfferStatus = "prepared" | "sent" | "cancelled";
+
+export interface CustomerOffer {
+  id: string;
+  customer_id: string;
+  part_id: string | null;
+  title: string;
+  message: string;
+  reference_price: number | null;
+  channel: OfferChannel;
+  status: OfferStatus;
+  created_by: string | null;
+  created_at: string;
+  sent_at: string | null;
+  customer?: Profile | null;
+  part?: Part | null;
 }
 
 export interface Inquiry {

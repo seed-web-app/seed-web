@@ -1,179 +1,113 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, ArrowRight, Sparkles } from "lucide-react";
-import { getOptimizedImageUrl } from "@/lib/images";
+import { useCallback, useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowRight, CarFront, ChevronLeft, ChevronRight, ShieldCheck, Wrench } from "lucide-react";
 
-interface Slide {
-  id: number;
-  title: string;
-  badge: string;
-  subtitle: string;
-  imageUrl: string;
-  primaryCtaText: string;
-  primaryCtaLink: string;
-  secondaryCtaText: string;
-  secondaryCtaLink: string;
-}
-
-const slides: Slide[] = [
+const slides = [
   {
-    id: 1,
-    badge: "Official Dealership Inventory • Mauritius",
-    title: "Genuine Suzuki Spare Parts & Service Components",
-    subtitle: "Direct authorized inventory. Upgrade or maintain your Suzuki with authentic water pumps, flywheels, cylinder heads, starter motors, and body panels.",
-    imageUrl: "/suzuki-parts/imgi_104_banner3-2.jpg",
-    primaryCtaText: "Browse Spare Parts",
-    primaryCtaLink: "/home#all-parts",
-    secondaryCtaText: "Explore Models",
-    secondaryCtaLink: "/cars",
+    eyebrow: "Made for Mauritius",
+    title: "Everything your Suzuki needs, one request away.",
+    description: "Discover genuine parts, check reference pricing, and speak directly with a local parts advisor—without carts or checkout.",
+    image: "/brand/coastal-hero.jpg",
+    imagePosition: "center",
+    primary: { label: "Explore parts", href: "/home#all-parts" },
+    secondary: { label: "My garage", href: "/profile#garage" },
+    icon: ShieldCheck,
   },
   {
-    id: 2,
-    badge: "Official Workshop Engineering",
-    title: "Boosterjet & Dualjet Engine Assemblies & Kits",
-    subtitle: "Precision forged crankshafts, MLS head gaskets, intercooler pumps, and heavy-duty timing belts engineered for tropical reliability.",
-    imageUrl: "/suzuki-parts/imgi_2_engine-1-v2.png",
-    primaryCtaText: "Browse Engine Parts",
-    primaryCtaLink: "/home?category=Engine+%26+Drivetrain",
-    secondaryCtaText: "Read Maintenance Guide",
-    secondaryCtaLink: "/news",
+    eyebrow: "Dealer-verified parts",
+    title: "Clear condition notes. Confident fitment.",
+    description: "Body panels, lighting, brakes, and service parts with transparent primer notes and support from the dealer team.",
+    image: "/brand/parts-studio.jpg",
+    imagePosition: "center",
+    primary: { label: "Browse catalog", href: "/home#all-parts" },
+    secondary: { label: "Care guides", href: "/content" },
+    icon: Wrench,
   },
   {
-    id: 3,
-    badge: "Dealership Direct Quality",
-    title: "Authorized Suzuki Genuine Spares Warehouse",
-    subtitle: "Rapid fulfillment from Phoenix Central Depot & Port Louis Harbour. Verified chassis fitment with direct WhatsApp inquiry desk.",
-    imageUrl: "/suzuki-parts/imgi_40_KM-Home-05-Filler-Image-02.png",
-    primaryCtaText: "View Genuine Parts",
-    primaryCtaLink: "/home",
-    secondaryCtaText: "Read Government Policy",
-    secondaryCtaLink: "/news",
-  },
-  {
-    id: 4,
-    badge: "Dealership Direct Network",
-    title: "Direct Offline Quotation via WhatsApp or Phone",
-    subtitle: "No online checkout hassle. Inquire about any part and our certified Suzuki specialists in Phoenix & Port Louis will verify VIN fitment directly.",
-    imageUrl: "https://images.unsplash.com/photo-1486006920555-c77dce18193b?auto=format&fit=crop&w=1800&q=80",
-    primaryCtaText: "Manage My Garage",
-    primaryCtaLink: "/profile",
-    secondaryCtaText: "Join Owner Forum",
-    secondaryCtaLink: "/forum",
+    eyebrow: "Your owner network",
+    title: "Built around your Suzuki, not a shopping cart.",
+    description: "Save your vehicle, find compatible parts, follow requests, and connect with other Suzuki owners in one private space.",
+    image: "/brand/vehicle-lineup.jpg",
+    imagePosition: "center",
+    primary: { label: "View vehicles", href: "/cars" },
+    secondary: { label: "Join community", href: "/forum" },
+    icon: CarFront,
   },
 ];
 
 export function HeroSlider() {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
-
-  const nextSlide = useCallback(() => {
-    setCurrentIndex((prev) => (prev + 1) % slides.length);
-  }, []);
-
-  const prevSlide = () => {
-    setCurrentIndex((prev) => (prev - 1 + slides.length) % slides.length);
-  };
+  const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const next = useCallback(() => setIndex((current) => (current + 1) % slides.length), []);
+  const previous = () => setIndex((current) => (current - 1 + slides.length) % slides.length);
 
   useEffect(() => {
-    if (isPaused) return;
-    const interval = setInterval(nextSlide, 6000);
-    return () => clearInterval(interval);
-  }, [isPaused, nextSlide]);
+    if (paused) return;
+    const timer = window.setInterval(next, 7000);
+    return () => window.clearInterval(timer);
+  }, [next, paused]);
 
-  const current = slides[currentIndex];
+  const slide = slides[index];
+  const Icon = slide.icon;
 
   return (
-    <div
-      className="relative w-full overflow-hidden rounded-b-lg shadow-sm select-none"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
+    <section
+      className="relative overflow-hidden rounded-[30px] bg-[#111113] shadow-[0_24px_70px_rgba(17,17,19,0.16)] sm:rounded-[38px]"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      aria-roledescription="carousel"
+      aria-label="Suzuki owner network highlights"
     >
-      {/* Background Image Container */}
-      <div className="relative h-[280px] sm:h-[360px] md:h-[420px] lg:h-[460px] w-full bg-[#131921]">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={getOptimizedImageUrl(current.imageUrl, 1200, 75)}
-          alt={current.title}
-          decoding="async"
-          className="absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-700 opacity-80"
-        />
+      <div className="relative min-h-[500px] sm:min-h-[540px] lg:min-h-[570px]">
+        <AnimatePresence mode="wait">
+          <motion.div key={slide.image} initial={{ opacity: 0, scale: 1.02 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.55, ease: "easeOut" }} className="absolute inset-0">
+            <Image
+              src={slide.image}
+              alt=""
+              fill
+              preload={index === 0}
+              sizes="(max-width: 1440px) 100vw, 1380px"
+              className="object-cover"
+              style={{ objectPosition: slide.imagePosition }}
+            />
+          </motion.div>
+        </AnimatePresence>
 
-        {/* Gradient Overlay for Amazon Content Blend */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#131921] via-[#131921]/75 to-transparent sm:w-2/3" />
-        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#f5f6f7] via-[#f5f6f7]/50 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/[0.86] via-black/[0.48] to-black/[0.04]" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
 
-        {/* Content Box */}
-        <div className="relative z-10 h-full max-w-7xl mx-auto px-4 sm:px-8 flex flex-col justify-center max-w-2xl text-white pb-12 sm:pb-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/90 text-[#17191d] text-[11px] font-extrabold uppercase tracking-wider mb-3 shadow-sm w-fit backdrop-blur-sm">
-            <Sparkles className="w-3.5 h-3.5 text-[#e30613]" />
-            <span>{current.badge}</span>
+        <div className="relative z-10 flex min-h-[500px] max-w-2xl flex-col justify-end px-6 pb-20 pt-12 text-white sm:min-h-[540px] sm:px-10 sm:pb-20 lg:min-h-[570px] lg:px-14">
+          <AnimatePresence mode="wait">
+            <motion.div key={index} initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.45, ease: "easeOut" }}>
+              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/15 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] backdrop-blur-xl">
+                <Icon className="h-3.5 w-3.5" /> {slide.eyebrow}
+              </div>
+              <h1 className="max-w-xl text-4xl font-black leading-[1.02] tracking-[-0.05em] sm:text-5xl lg:text-[3.65rem]">{slide.title}</h1>
+              <p className="mt-5 max-w-lg text-sm font-medium leading-6 text-white/78 sm:text-base sm:leading-7">{slide.description}</p>
+              <div className="mt-7 flex flex-wrap gap-3">
+                <Link href={slide.primary.href} className="flex min-h-12 items-center gap-2 rounded-full bg-white px-6 text-sm font-bold text-[#1d1d1f] shadow-xl transition hover:-translate-y-0.5 hover:bg-[#f5f5f7]">{slide.primary.label}<ArrowRight className="h-4 w-4" /></Link>
+                <Link href={slide.secondary.href} className="flex min-h-12 items-center rounded-full border border-white/25 bg-white/10 px-6 text-sm font-bold text-white backdrop-blur-xl transition hover:bg-white/20">{slide.secondary.label}</Link>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        <div className="absolute bottom-6 left-6 right-6 z-20 flex items-center justify-between sm:left-10 sm:right-10 lg:left-14 lg:right-14">
+          <div className="flex gap-2" aria-label="Choose slide">
+            {slides.map((item, slideIndex) => (
+              <button key={item.title} onClick={() => setIndex(slideIndex)} aria-label={`Show slide ${slideIndex + 1}`} aria-current={slideIndex === index} className={`h-1.5 rounded-full transition-all ${slideIndex === index ? "w-9 bg-white" : "w-4 bg-white/35 hover:bg-white/65"}`} />
+            ))}
           </div>
-
-          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black tracking-tight text-white leading-tight drop-shadow-md">
-            {current.title}
-          </h1>
-
-          <p className="mt-2.5 text-xs sm:text-sm text-[#e3e6e6] leading-relaxed line-clamp-3 drop-shadow">
-            {current.subtitle}
-          </p>
-
-          <div className="mt-5 flex flex-wrap items-center gap-3">
-            <Link
-              href={current.primaryCtaLink}
-              className="px-6 py-2.5 rounded-full btn-amazon-primary text-xs sm:text-sm font-bold text-[#0f1111] shadow-md hover:shadow-lg transition-all flex items-center gap-1.5"
-            >
-              <span>{current.primaryCtaText}</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-
-            <Link
-              href={current.secondaryCtaLink}
-              className="px-5 py-2.5 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/40 text-xs sm:text-sm font-semibold text-white transition-all flex items-center gap-1.5"
-            >
-              <span>{current.secondaryCtaText}</span>
-            </Link>
+          <div className="flex gap-2">
+            <button onClick={previous} aria-label="Previous slide" className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/15 text-white backdrop-blur-xl transition hover:bg-white hover:text-black"><ChevronLeft className="h-4 w-4" /></button>
+            <button onClick={next} aria-label="Next slide" className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/15 text-white backdrop-blur-xl transition hover:bg-white hover:text-black"><ChevronRight className="h-4 w-4" /></button>
           </div>
         </div>
       </div>
-
-      {/* Prev Navigation Arrow */}
-      <button
-        type="button"
-        onClick={prevSlide}
-        aria-label="Previous Slide"
-        className="absolute left-2 sm:left-4 top-1/3 -translate-y-1/2 w-10 h-16 sm:w-11 sm:h-20 bg-black/30 hover:bg-black/60 text-white flex items-center justify-center rounded-r transition-all z-20 backdrop-blur-xs cursor-pointer"
-      >
-        <ChevronLeft className="w-6 h-6 sm:w-7 sm:h-7" />
-      </button>
-
-      {/* Next Navigation Arrow */}
-      <button
-        type="button"
-        onClick={nextSlide}
-        aria-label="Next Slide"
-        className="absolute right-2 sm:right-4 top-1/3 -translate-y-1/2 w-10 h-16 sm:w-11 sm:h-20 bg-black/30 hover:bg-black/60 text-white flex items-center justify-center rounded-l transition-all z-20 backdrop-blur-xs cursor-pointer"
-      >
-        <ChevronRight className="w-6 h-6 sm:w-7 sm:h-7" />
-      </button>
-
-      {/* Slide Indicators Dots */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
-        {slides.map((_, i) => (
-          <button
-            key={i}
-            type="button"
-            onClick={() => setCurrentIndex(i)}
-            aria-label={`Go to slide ${i + 1}`}
-            className={`transition-all rounded-full cursor-pointer ${
-              currentIndex === i
-                ? "w-8 h-2.5 bg-[#e30613]"
-                : "w-2.5 h-2.5 bg-white/60 hover:bg-white"
-            }`}
-          />
-        ))}
-      </div>
-    </div>
+    </section>
   );
 }

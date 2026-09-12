@@ -10,7 +10,6 @@ import { getGuestInquiryRecords } from "@/lib/inquiries";
 import { STANDING_CONDITION_DISCLAIMER } from "@/lib/types";
 import {
   AlertTriangle,
-  Star,
   MapPin,
   ShieldCheck,
   Send,
@@ -19,7 +18,6 @@ import {
   Car,
   Lock,
   Phone,
-  Wrench,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -74,7 +72,7 @@ export default async function PartDetailPage({
     .slice(0, 8);
 
   return (
-    <div className="min-h-screen bg-[#f5f6f7] flex flex-col font-sans">
+    <div className="app-canvas min-h-screen flex flex-col font-sans text-[#1d1d1f]">
       <CustomerNavbar
         profile={profile}
         vehicleCount={vehicles.length}
@@ -130,7 +128,7 @@ export default async function PartDetailPage({
         )}
 
         {/* Amazon 3-Column Product Detail Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 bg-white p-6 rounded-lg border border-[#e7e7e7] shadow-xs">
+        <div className="ios-card grid grid-cols-1 lg:grid-cols-12 gap-8 bg-white p-5 sm:p-7 rounded-[30px]">
           {/* Column 1: Interactive Image Gallery (4 cols) */}
           <div className="lg:col-span-4">
             <PartGallery photos={part.photos || []} name={part.name} />
@@ -155,15 +153,9 @@ export default async function PartDetailPage({
               )}
             </div>
 
-            {/* Star Rating & Reviews */}
-            <div className="flex items-center gap-2 border-b border-[#f0f0f0] pb-3">
-              <div className="flex text-[#ffa41c]">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-4 h-4 fill-current" />
-                ))}
-              </div>
-              <span className="text-xs font-bold text-[#007185]">4.9 out of 5</span>
-              <span className="text-xs text-[#565959]">| 84 owner reviews in Mauritius</span>
+            <div className="flex flex-wrap items-center gap-2 border-b border-black/[0.06] pb-4 text-[11px] font-semibold">
+              <span className="rounded-full bg-[#e8f8ef] px-3 py-1.5 text-[#138a51]">Dealer catalog verified</span>
+              <span className="rounded-full bg-[#f2f2f4] px-3 py-1.5 text-[#6e6e73]">Fitment checked on request</span>
             </div>
 
             {/* Pricing Section in Mauritian Rupees */}
@@ -229,11 +221,16 @@ export default async function PartDetailPage({
               <h3 className="text-xs font-bold uppercase text-[#565959] tracking-wider">
                 About This Item
               </h3>
+              {part.description || part.short_description ? (
+                <p className="text-sm leading-6 text-[#343536]">
+                  {part.description || part.short_description}
+                </p>
+              ) : null}
               <ul className="list-disc pl-5 text-xs text-[#0f1111] space-y-1.5 leading-relaxed">
-                <li>Factory genuine OEM specification replacement component.</li>
-                <li>Engineered specifically for Suzuki right-hand-drive island vehicles.</li>
-                <li>Passes Mauritius National Transport Authority road fitness standards.</li>
-                <li>Full fitment verification when requested through authorized dealership parts desks.</li>
+                <li>Catalog listing includes the dealer&apos;s latest reference price.</li>
+                <li>Compatibility is confirmed against your vehicle before a final quote.</li>
+                <li>Condition and primer notes are visible before you send a request.</li>
+                <li>No checkout or online payment is collected in this app.</li>
               </ul>
             </div>
           </div>
@@ -358,145 +355,30 @@ export default async function PartDetailPage({
           </div>
         </div>
 
-        {/* Expanded Technical Specifications & Verified Mauritian Reviews */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Technical Specs Sheet (7 cols) */}
-          <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-[#e7e7e7] space-y-4">
-            <div className="border-b border-[#f0f0f0] pb-3 flex items-center justify-between">
-              <div>
-                <span className="text-[10px] uppercase font-bold text-[#c7511f] tracking-wider">
-                  Engineering Data Sheet
-                </span>
-                <h3 className="text-base font-bold text-[#0f1111]">
-                  Official OEM Technical Specifications
-                </h3>
-              </div>
-              <span className="px-2.5 py-1 rounded bg-[#e8f4fd] text-[#007185] text-[11px] font-bold">
-                EPC-Verified
-              </span>
-            </div>
-
-            <div className="divide-y divide-[#f0f0f0] text-xs">
-              <div className="py-2.5 grid grid-cols-3 gap-2">
-                <span className="text-[#565959] font-medium">Manufacturer</span>
-                <span className="col-span-2 font-bold text-[#0f1111]">Suzuki Motor Corporation / Suzuki ECSTAR Genuine</span>
-              </div>
-              <div className="py-2.5 grid grid-cols-3 gap-2">
-                <span className="text-[#565959] font-medium">Category Subsystem</span>
-                <span className="col-span-2 font-semibold text-[#0f1111]">{part.category}</span>
-              </div>
-              <div className="py-2.5 grid grid-cols-3 gap-2">
-                <span className="text-[#565959] font-medium">OEM Part Number</span>
-                <span className="col-span-2 font-mono font-bold text-[#0f1111]">{part.part_number || "SZ-GENUINE-EPC"}</span>
-              </div>
-              <div className="py-2.5 grid grid-cols-3 gap-2">
-                <span className="text-[#565959] font-medium">Surface & Protective Finish</span>
-                <span className="col-span-2 text-[#0f1111]">{part.primer_note || "Anti-Corrosion Electro-Deposition Gray Primer (E-Coat)"}</span>
-              </div>
-              <div className="py-2.5 grid grid-cols-3 gap-2">
-                <span className="text-[#565959] font-medium">Island Climate Rating</span>
-                <span className="col-span-2 text-[#2b8a3e] font-semibold">Mauritius Tropical Spec (Salt-Air & Humidity Resistant)</span>
-              </div>
-              <div className="py-2.5 grid grid-cols-3 gap-2">
-                <span className="text-[#565959] font-medium">Phoenix Fitting Time</span>
-                <span className="col-span-2 text-[#0f1111]">30 - 60 Minutes (Certified Fitting Bay Available)</span>
-              </div>
-              <div className="py-2.5 grid grid-cols-3 gap-2">
-                <span className="text-[#565959] font-medium">Official Guarantee</span>
-                <span className="col-span-2 text-[#0f1111] font-bold">6 Months / 10,000 km Dealership Warranty</span>
-              </div>
-            </div>
-
-            {/* Dealership Installation Banner */}
-            <div className="p-4 rounded-xl bg-[#f7fafa] border border-[#d5d9d9] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-4">
-              <div className="space-y-0.5">
-                <span className="text-xs font-bold text-[#0f1111] flex items-center gap-1.5">
-                  <Wrench className="w-4 h-4 text-[#f08804]" />
-                  <span>Certified Fitting & Spray-Paint Service at Phoenix Depot</span>
-                </span>
-                <p className="text-[11px] text-[#565959]">
-                  Body panels arrive in protective gray primer. Book factory color-matching with multi-stage clear coat at our Phoenix spray booth.
-                </p>
-              </div>
-              <a
-                href={`https://wa.me/2305550199?text=${encodeURIComponent(`Hello Suzuki Phoenix, I would like to enquire about fitting/painting service for ${part.name}`)}`}
-                target="_blank"
-                rel="noreferrer"
-                className="px-3.5 py-2 rounded-full btn-amazon-primary text-xs font-bold text-[#0f1111] whitespace-nowrap shadow-xs"
-              >
-                Inquire Fitment Desk
-              </a>
+        <section className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <div className="ios-card rounded-[28px] p-6 sm:p-8">
+            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#e30613]">Part information</p>
+            <h2 className="mt-2 text-2xl font-black tracking-[-0.035em]">What we know</h2>
+            <div className="mt-5 divide-y divide-black/[0.06] text-xs">
+              <div className="grid grid-cols-[120px_1fr] gap-4 py-3"><span className="font-semibold text-[#8e8e93]">Category</span><span className="font-bold">{part.category}</span></div>
+              <div className="grid grid-cols-[120px_1fr] gap-4 py-3"><span className="font-semibold text-[#8e8e93]">Part number</span><span className="font-mono font-bold">{part.part_number || "Confirmed on request"}</span></div>
+              <div className="grid grid-cols-[120px_1fr] gap-4 py-3"><span className="font-semibold text-[#8e8e93]">Models</span><span className="font-bold">{part.compatible_models?.length ? part.compatible_models.join(", ") : "Fitment checked by the dealer"}</span></div>
+              <div className="grid grid-cols-[120px_1fr] gap-4 py-3"><span className="font-semibold text-[#8e8e93]">Condition</span><span className="font-bold">{part.condition_note || "Dealer condition note provided before confirmation"}</span></div>
+              {part.primer_note ? <div className="grid grid-cols-[120px_1fr] gap-4 py-3"><span className="font-semibold text-[#8e8e93]">Primer</span><span className="font-bold">{part.primer_note}</span></div> : null}
             </div>
           </div>
 
-          {/* Verified Owner Reviews (5 cols) */}
-          <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-[#e7e7e7] space-y-4">
-            <div className="border-b border-[#f0f0f0] pb-3">
-              <span className="text-[10px] uppercase font-bold text-[#2b8a3e] tracking-wider">
-                Island Driver Feedback
-              </span>
-              <h3 className="text-base font-bold text-[#0f1111]">
-                Verified Mauritian Owner Reviews
-              </h3>
-              <div className="flex items-center gap-2 mt-1">
-                <div className="flex text-[#ffa41c]">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-current" />
-                  ))}
-                </div>
-                <span className="text-xs font-bold text-[#0f1111]">4.9 out of 5</span>
-                <span className="text-xs text-[#565959]">(84 local reviews)</span>
-              </div>
+          <div className="rounded-[28px] bg-[#1d1d1f] p-6 text-white shadow-[0_20px_50px_rgba(17,17,19,0.12)] sm:p-8">
+            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#ff6b75]">Simple request flow</p>
+            <h2 className="mt-2 text-2xl font-black tracking-[-0.035em]">What happens next</h2>
+            <div className="mt-6 space-y-4">
+              <div className="flex gap-3"><span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-white/10 text-xs font-black">1</span><div><p className="text-sm font-bold">Send your request</p><p className="mt-1 text-xs leading-5 text-white/55">Choose a registered vehicle and add any useful chassis notes.</p></div></div>
+              <div className="flex gap-3"><span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-white/10 text-xs font-black">2</span><div><p className="text-sm font-bold">Dealer checks the fitment</p><p className="mt-1 text-xs leading-5 text-white/55">A parts advisor reviews compatibility, condition, and availability.</p></div></div>
+              <div className="flex gap-3"><span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-white/10 text-xs font-black">3</span><div><p className="text-sm font-bold">Confirm directly</p><p className="mt-1 text-xs leading-5 text-white/55">You receive the final information by phone or WhatsApp. No online payment.</p></div></div>
             </div>
-
-            <div className="space-y-3.5">
-              <div className="p-3.5 rounded-xl bg-[#f9fafa] border border-[#f0f0f0] space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-[#0f1111]">Jean-Marc D. • Curepipe</span>
-                  <span className="text-[10px] text-[#565959]">Verified Swift Owner</span>
-                </div>
-                <div className="flex text-[#ffa41c]">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-3 h-3 fill-current" />
-                  ))}
-                </div>
-                <p className="text-[11px] text-[#565959] leading-relaxed">
-                  &ldquo;Item arrived in sealed gray electro-primer. Took it to Phoenix AutoPaint for Champion Yellow coat. Bolt holes and clips lined up 100% factory perfect.&rdquo;
-                </p>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-[#f9fafa] border border-[#f0f0f0] space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-[#0f1111]">Kev R. • Tamarin / Chamarel</span>
-                  <span className="text-[10px] text-[#565959]">Verified Jimny JB74 Driver</span>
-                </div>
-                <div className="flex text-[#ffa41c]">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-3 h-3 fill-current" />
-                  ))}
-                </div>
-                <p className="text-[11px] text-[#565959] leading-relaxed">
-                  &ldquo;Tested on basalt rock trails in Chamarel. Solid construction and OEM fasteners included. Dealership verified chassis fitment before counter pickup.&rdquo;
-                </p>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-[#f9fafa] border border-[#f0f0f0] space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-[#0f1111]">Aisha M. • Grand Baie</span>
-                  <span className="text-[10px] text-[#565959]">Verified Grand Vitara Owner</span>
-                </div>
-                <div className="flex text-[#ffa41c]">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-3 h-3 fill-current" />
-                  ))}
-                </div>
-                <p className="text-[11px] text-[#565959] leading-relaxed">
-                  &ldquo;Genuine component with official Suzuki holographic security seal. Picked up at the North Coast counter in Grand Baie smoothly.&rdquo;
-                </p>
-              </div>
-            </div>
+            <a href={`https://wa.me/2305550199?text=${encodeURIComponent(`Hello Suzuki Mauritius, I would like fitment help for ${part.name}`)}`} target="_blank" rel="noreferrer" className="mt-7 flex min-h-11 items-center justify-center gap-2 rounded-full bg-white px-5 text-xs font-bold text-[#1d1d1f]"><Phone className="h-4 w-4" /> Ask the fitment desk</a>
           </div>
-        </div>
+        </section>
 
         {/* Related Products Rail */}
         {relatedParts.length > 0 && (

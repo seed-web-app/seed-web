@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { getCurrentProfile } from "@/lib/supabase/server";
 import { signInWithGoogle } from "@/app/auth/actions";
 import {
@@ -90,42 +91,24 @@ export default async function RootPage({ searchParams }: PageProps) {
         </div>
       </header>
 
-      <main className="mx-auto grid w-full max-w-6xl flex-1 items-center gap-10 px-5 py-10 sm:px-8 sm:py-16 lg:grid-cols-[1.12fr_0.88fr] lg:gap-16 lg:py-20">
-        <section className="max-w-2xl">
-          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#e30613]/15 bg-[#e30613]/[0.06] px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#c80011]">
-            <ShieldCheck className="h-3.5 w-3.5" />
-            Built for Suzuki owners
-          </div>
-
-          <h1 className="max-w-xl text-4xl font-black leading-[1.04] tracking-[-0.045em] text-[#111317] sm:text-5xl lg:text-[3.7rem]">
-            The direct line to the
-            <span className="block text-[#e30613] sm:inline"> right Suzuki part.</span>
-          </h1>
-
-          <p className="mt-5 max-w-xl text-sm leading-7 text-[#626870] sm:text-base">
-            Your private owner network for genuine parts, vehicle support, and dealer inquiries across Mauritius—without carts, checkout, or online payments.
-          </p>
-
-          <div className="mt-8 grid gap-3 sm:grid-cols-3">
-            {networkHighlights.map((item) => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={item.title}
-                  className="rounded-2xl border border-black/[0.06] bg-white/70 p-4 shadow-[0_10px_30px_rgba(17,19,23,0.045)] backdrop-blur-sm"
-                >
-                  <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-[#171a1f] text-white">
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <h2 className="text-xs font-extrabold text-[#17191d]">{item.title}</h2>
-                  <p className="mt-1.5 text-[11px] leading-5 text-[#6c727a]">{item.description}</p>
-                </div>
-              );
-            })}
+      <main className="mx-auto grid w-full max-w-7xl flex-1 items-center gap-6 px-4 py-5 sm:px-8 sm:py-10 lg:grid-cols-[1.15fr_0.85fr] lg:py-12">
+        <section className="relative min-h-[520px] overflow-hidden rounded-[32px] bg-[#1d1d1f] shadow-[0_28px_80px_rgba(17,17,19,0.17)] sm:min-h-[640px] sm:rounded-[40px]">
+          <Image src="/brand/coastal-hero.jpg" alt="Two modern compact vehicles overlooking the Mauritius coast at sunrise" fill preload sizes="(max-width: 1024px) 100vw, 58vw" className="object-cover object-center" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/[0.88] via-black/15 to-black/5" />
+          <div className="absolute inset-x-0 bottom-0 z-10 p-6 text-white sm:p-10 lg:p-12">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.15em] backdrop-blur-xl"><ShieldCheck className="h-3.5 w-3.5" /> Built for Suzuki owners</div>
+            <h1 className="max-w-2xl text-4xl font-black leading-[1.02] tracking-[-0.05em] sm:text-5xl lg:text-[3.55rem]">The direct line to the right Suzuki part.</h1>
+            <p className="mt-4 max-w-xl text-sm font-medium leading-6 text-white/72 sm:text-base">Your private owner network for genuine parts, vehicle support, and dealer inquiries across Mauritius—without carts, checkout, or online payments.</p>
+            <div className="mt-6 grid gap-2 sm:grid-cols-3">
+              {networkHighlights.map((item) => {
+                const Icon = item.icon;
+                return <div key={item.title} className="rounded-2xl border border-white/15 bg-black/15 p-3.5 backdrop-blur-xl"><Icon className="mb-2 h-4 w-4 text-[#ff6b75]" /><h2 className="text-[11px] font-extrabold">{item.title}</h2><p className="mt-1 hidden text-[10px] leading-4 text-white/55 sm:block">{item.description}</p></div>;
+              })}
+            </div>
           </div>
         </section>
 
-        <section className="auth-card rounded-[28px] p-6 sm:p-8" aria-labelledby="sign-in-title">
+        <section className="auth-card rounded-[30px] p-6 sm:p-8 lg:p-9" aria-labelledby="sign-in-title">
           <div className="mb-7 flex items-center justify-between gap-4">
             <div>
               <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#e30613]">
