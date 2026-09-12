@@ -5,6 +5,12 @@ const PUBLIC_EXACT_ROUTES = ["/", "/login"];
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  const requestHost = (request.headers.get("x-forwarded-host") || request.headers.get("host") || "")
+    .split(":")[0]
+    .toLowerCase();
+  const sharedCookieDomain = requestHost === "bestmodel.fun" || requestHost.endsWith(".bestmodel.fun")
+    ? ".bestmodel.fun"
+    : undefined;
 
   // Allow API and auth callback routes without intercepting
   if (pathname.startsWith("/api") || pathname.startsWith("/auth")) {
@@ -42,7 +48,10 @@ export async function proxy(request: NextRequest) {
         }
         response = NextResponse.next({ request });
         for (const { name, value, options } of items) {
-          response.cookies.set(name, value, options);
+          response.cookies.set(name, value, {
+            ...options,
+            ...(sharedCookieDomain ? { domain: sharedCookieDomain } : {}),
+          });
         }
       },
     },

@@ -17,6 +17,7 @@ export const dynamic = "force-dynamic";
 
 interface PageProps {
   searchParams: Promise<{
+    code?: string;
     error?: string;
     error_code?: string;
   }>;
@@ -52,13 +53,20 @@ const networkHighlights = [
 ];
 
 export default async function RootPage({ searchParams }: PageProps) {
+  const { code, error, error_code: errorCode } = await searchParams;
+
+  // Supabase can fall back to the configured site root when a callback URL is
+  // not yet allow-listed. Recover that valid OAuth code through our callback.
+  if (code) {
+    redirect(`/auth/callback?code=${encodeURIComponent(code)}`);
+  }
+
   const profile = await getCurrentProfile();
 
   if (profile) {
     redirect(profile.role === "admin" ? "/admin" : "/home");
   }
 
-  const { error, error_code: errorCode } = await searchParams;
   const errorKey = errorCode || error;
 
   return (

@@ -2,7 +2,7 @@ import "server-only";
 
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { appConfig } from "@/lib/config";
 import type { Profile, Vehicle, DealerSettings } from "@/lib/types";
 
@@ -10,13 +10,23 @@ export async function createSupabaseServerClient() {
   if (!appConfig.supabaseUrl || !appConfig.supabaseKey) return null;
 
   const cookieStore = await cookies();
+  const requestHeaders = await headers();
+  const host = (requestHeaders.get("x-forwarded-host") || requestHeaders.get("host") || "")
+    .split(":")[0]
+    .toLowerCase();
+  const sharedCookieDomain = host === "bestmodel.fun" || host.endsWith(".bestmodel.fun")
+    ? ".bestmodel.fun"
+    : undefined;
   return createServerClient(appConfig.supabaseUrl, appConfig.supabaseKey, {
     cookies: {
       getAll: () => cookieStore.getAll(),
       setAll: (items) => {
         try {
           for (const { name, value, options } of items) {
-            cookieStore.set(name, value, options);
+            cookieStore.set(name, value, {
+              ...options,
+              ...(sharedCookieDomain ? { domain: sharedCookieDomain } : {}),
+            });
           }
         } catch {
           // Server components cannot write cookies; proxy / middleware handles session refresh
